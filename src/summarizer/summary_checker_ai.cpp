@@ -39,7 +39,6 @@ property_checkert::resultt summary_checker_ait::operator()(
     ssa_unwinder.init_localunwinders();
 
     ssa_unwinder.unwind_all(unwind);
-    ssa_unwinder.output(debug()); debug() <<eom;
   }
 
   irep_idt entry_function = goto_model.goto_functions.entry_point();
@@ -149,4 +148,39 @@ void summary_checker_ait::report_preconditions()
 	     << (!computed ? "not computed" : 
 		 from_expr(it->second->ns, "", precondition)) << eom;
   }
+}
+
+/*******************************************************************\
+
+Function: summary_checker_ait::report_termination
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+property_checkert::resultt summary_checker_ait::report_termination()
+{
+  result() << eom;
+  result() << "** Termination: " << eom;
+  bool all_terminate = true; 
+  bool one_nonterminate = false; 
+  ssa_dbt::functionst &functions = ssa_db.functions();
+  for(ssa_dbt::functionst::iterator it = functions.begin();
+      it != functions.end(); it++)
+  {
+    threevalt terminates = YES;
+    bool computed = summary_db.exists(it->first);
+    if(computed) terminates = summary_db.get(it->first).terminates;
+    all_terminate = all_terminate && (terminates==YES);
+    one_nonterminate = one_nonterminate || (terminates==NO);
+    result() << "[" << it->first << "]: " 
+	     << (!computed ? "not computed" : threeval2string(terminates)) << eom;
+  }
+  if(all_terminate) return property_checkert::PASS;
+  if(one_nonterminate) return property_checkert::FAIL;
+  return property_checkert::UNKNOWN;
 }

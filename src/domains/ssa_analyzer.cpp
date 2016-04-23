@@ -34,9 +34,9 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/simplify_expr.h>
 #include <util/mp_arith.h>
 
-#define BINSEARCH_SOLVER strategy_solver_binsearcht(*static_cast<tpolyhedra_domaint *>(domain), solver, SSA.ns)
-//#define BINSEARCH_SOLVER strategy_solver_binsearch2t(*static_cast<tpolyhedra_domaint *>(domain), solver, SSA.ns)
-//#define BINSEARCH_SOLVER strategy_solver_binsearch3t(*static_cast<tpolyhedra_domaint *>(domain), solver, SSA, SSA.ns)
+#define BINSEARCH_SOLVER strategy_solver_binsearcht(*static_cast<tpolyhedra_domaint *>(domain), solver, assertions_check, SSA.ns)
+//#define BINSEARCH_SOLVER strategy_solver_binsearch2t(*static_cast<tpolyhedra_domaint *>(domain), solver, assertions_check, SSA.ns)
+//#define BINSEARCH_SOLVER strategy_solver_binsearch3t(*static_cast<tpolyhedra_domaint *>(domain), solver, assertions_check, SSA, SSA.ns)
 
 #ifdef DEBUG
 #include <iostream>
@@ -127,7 +127,8 @@ bool ssa_analyzert::operator()(incremental_solvert &solver,
     {
       result = new predabs_domaint::templ_valuet();
       strategy_solver = new strategy_solver_predabst(
-        *static_cast<predabs_domaint *>(domain), solver, SSA.ns);
+        *static_cast<predabs_domaint *>(domain), solver, 
+	assertions_check, SSA.ns);
     }
     else if(template_generator.options.get_bool_option("binsearch-solver"))
     {

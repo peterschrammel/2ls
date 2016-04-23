@@ -15,6 +15,8 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <util/std_expr.h>
 
+#include "../ssa/local_ssa.h"
+
 typedef enum{YES, NO, UNKNOWN} threevalt;
 
 class summaryt
@@ -50,6 +52,9 @@ class summaryt
   predicatet bw_transformer; // backward summary (over- or under-approx)
   predicatet bw_invariant; // backward invariant (over- or under-approx)
 
+  predicatet termination_argument;
+  threevalt terminates;
+
   bool mark_recompute; //to force recomputation of the summary
                        // (used for invariant reuse in k-induction)
 
@@ -78,9 +83,6 @@ class summaryt
   error_summariest error_summaries;
   //--------------
 
-  bool mark_recompute; //to force recomputation of the summary
-                       // (used for invariant reuse in k-induction)
-
   void output(std::ostream &out, const namespacet &ns) const;
 
   void join(const summaryt &new_summary);
@@ -92,6 +94,6 @@ class summaryt
 
 };
 
-
+std::string threeval2string(threevalt v);
 
 #endif

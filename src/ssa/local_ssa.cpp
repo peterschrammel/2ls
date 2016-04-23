@@ -280,28 +280,6 @@ void local_SSAt::find_nodes(locationt loc, std::list<nodest::const_iterator> &_n
 
 /*******************************************************************\
 
-Function: local_SSAt::find_location_by_number
-
-  Inputs:
-
- Outputs:
-
- Purpose:
-
-\*******************************************************************/
-
-local_SSAt::locationt local_SSAt::find_location_by_number(unsigned location_number) const
-{
-  local_SSAt::nodest::const_iterator n_it =nodes.begin();
-  for(; n_it != nodes.end(); n_it++)
-  {
-    if(n_it->location->location_number == location_number) break;
-  }
-  return n_it->location;
-}
-
-/*******************************************************************\
-
 Function: local_SSAt::edge_guard
 
   Inputs:
@@ -570,7 +548,7 @@ void local_SSAt::build_function_call(locationt loc)
       if(argtype.id()==ID_struct)
       {
 	exprt lhs = read_rhs(arg, loc);
-	for(int j=0; j<lhs.operands().size(); ++j)
+	for(size_t j=0; j<lhs.operands().size(); ++j)
         {
 	   n_it->equalities.push_back(equal_exprt(lhs.operands()[j],
 						  it->operands()[j]));

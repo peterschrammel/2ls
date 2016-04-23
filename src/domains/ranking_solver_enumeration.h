@@ -17,7 +17,7 @@ class ranking_solver_enumerationt : public strategy_solver_baset
     const namespacet &_ns,
     unsigned _max_inner_iterations
     ) : 
-    strategy_solver_baset(_solver, _ns),
+  strategy_solver_baset(_solver, literalt(),  _ns),
     linrank_domain(_linrank_domain),
     max_inner_iterations(_max_inner_iterations),
     inner_solver(_ns),
@@ -26,7 +26,7 @@ class ranking_solver_enumerationt : public strategy_solver_baset
    solver_instances++;
  }
 
-  virtual bool iterate(invariantt &inv);
+  virtual progresst iterate(invariantt &inv);
 
  protected:
   linrank_domaint &linrank_domain;

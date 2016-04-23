@@ -86,10 +86,6 @@ public:
     typedef std::vector<function_application_exprt> function_callst;
     function_callst function_calls;
 
-(??)    exprt enabling_expr; //for incremental unwinding
-(??)   
-(??)    bool marked; //for incremental unwinding
-
     //custom invariant templates
     typedef std::vector<exprt> templatest;
     templatest templates;
