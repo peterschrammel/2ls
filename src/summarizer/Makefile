@@ -3,6 +3,10 @@ include ../config.inc
 SRC = summarizer_base.cpp  \
       summarizer_fw.cpp summarizer_bw.cpp \
       summarizer_fw_term.cpp summarizer_bw_term.cpp \
+      summarizer_bw_cex.cpp summarizer_bw_cex_complete.cpp \
+      summarizer_bw_cex_concrete.cpp  \
+      summarizer_bw_cex_wp.cpp  \
+      summarizer_bw_cex_ai.cpp summarizer_bw_cex_all.cpp \
       summarizer_fw_contexts.cpp \
       summarizer_main.cpp summarizer_parse_options.cpp \
       show.cpp summary_checker_base.cpp \
@@ -44,6 +48,10 @@ DELTA_OBJ+=\
       ../ssa/ssa_unwinder$(OBJEXT)\
       ../ssa/unwindable_local_ssa$(OBJEXT)\
       ../ssa/ssa_value_set$(OBJEXT) \
+      ../ssa/const_propagator$(OBJEXT) \
+      ../ssa/replace_symbol_ext$(OBJEXT) \
+      ../ssa/ssa_const_propagator$(OBJEXT) \
+      ../ssa/ssa_dependency_graph$(OBJEXT) \
       ../functions/summary$(OBJEXT) \
       ../functions/get_function$(OBJEXT) \
       ../functions/path_util$(OBJEXT) \
@@ -68,6 +76,7 @@ DELTA_OBJ+=\
       ../domains/template_generator_summary$(OBJEXT) \
       ../domains/template_generator_callingcontext$(OBJEXT) \
       ../domains/ssa_analyzer$(OBJEXT) \
+      ../domains/disjunctive_analyzer$(OBJEXT) \
       ../domains/predicate$(OBJEXT) \
       ../domains/template_generator_ranking$(OBJEXT) \
       ../domains/ranking_solver_enumeration$(OBJEXT) \
@@ -98,7 +107,7 @@ LIBS =
 
 CLEANFILES = summarizer$(EXEEXT) $(DELTA_OBJ)
 
-all: 2ls$(EXEEXT)
+all: summarizer$(EXEEXT)
 
 ifneq ($(wildcard $(CBMC)/src/cpp/Makefile),)
   OBJ += $(CBMC)/src/cpp/cpp$(LIBEXT)
@@ -112,6 +121,6 @@ endif
 
 ###############################################################################
 
-2ls$(EXEEXT): $(OBJ)
+summarizer$(EXEEXT): $(OBJ)
 	$(LINKBIN)
 

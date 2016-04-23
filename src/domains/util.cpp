@@ -2,7 +2,6 @@
 
 #include "util.h"
 
-
 /*******************************************************************\
 
 Function: extend_expr_types
@@ -204,7 +203,7 @@ mp_integer simplify_const_int(const exprt &expr)
   if(expr.id()==ID_symbol) 
   {
 #if 0
-    std::cout << "substituting default value for " << expr << std::endl;
+    std::cerr << "substituting default value for " << expr << std::endl;
 #endif
     return 0; //default value if not substituted in expr
   }
@@ -284,9 +283,11 @@ ieee_floatt simplify_const_float(const exprt &expr)
   {
     ieee_floatt v;
     v.make_zero();
+
 #if 0
-    std::cout << "substituting default value for " << expr << std::endl;
+    std::cerr << "substituting default value for " << expr << std::endl;
 #endif
+
     return v; 
   }
   if(expr.id()==ID_index) 
@@ -307,9 +308,7 @@ ieee_floatt simplify_const_float(const exprt &expr)
 
 constant_exprt simplify_const(const exprt &expr)
 {
-//  std::cerr << "const: " << expr << std::endl;
   if(expr.id()==ID_constant) return to_constant_expr(expr);
-  //TODO: handle "address_of" constants
   if(expr.id()==ID_index) 
   {
     const index_exprt &index_expr = to_index_expr(expr);
@@ -457,3 +456,4 @@ void merge_and(exprt & result, const exprt &expr1, const exprt &expr2,
   if(expr1!=expr2) result = and_exprt(expr1,expr2);
   simplify(result,ns);
 }
+

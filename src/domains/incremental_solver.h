@@ -169,7 +169,8 @@ static inline incremental_solvert & operator << (
 #ifdef DISPLAY_FORMULA
   if(!dest.activation_literals.empty())
     std::cerr << "add_to_solver(" << !dest.activation_literals.back() << "): " 
-	      << from_expr(dest.ns,"",src) << std::endl;  else
+	      << from_expr(dest.ns,"",src) << std::endl;
+  else
       std::cerr << "add_to_solver: " << from_expr(dest.ns,"",src) << std::endl;
 #endif
 

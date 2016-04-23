@@ -126,6 +126,7 @@ public:
   ssa_local_unwindert &get(const irep_idt& fname)
     { return unwinder_map.at(fname); }
 
+
 protected:
   ssa_dbt& ssa_db;
   bool is_initialized;

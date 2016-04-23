@@ -808,6 +808,152 @@ void ssa_local_unwindert::unwinder_rename(symbol_exprt &var,
 #endif
 }
 
+
+unsigned ssa_local_unwindert::rename_required(const exprt& e,
+    const unsigned prev_unwinding) const
+{
+  if(e.id()==ID_symbol)
+    {
+      const symbol_exprt& sym=to_symbol_expr(e);
+      irep_idt id = sym.get_identifier();
+
+      std::list<unsigned> iterations;
+      irep_idt basename;
+      dissect_loop_suffix(id,basename,iterations,false);
+      bool rename_required=true;
+      for(std::list<unsigned>::iterator it=iterations.begin();
+          it!=iterations.end();it++)
+      {
+        if(*it!=(prev_unwinding-1)) rename_required=false;
+      }
+      //if(iterations.back()==(prev_unwinding-1)) return iterations.size();
+      if(rename_required) return iterations.size();
+
+
+    }
+    else
+    {
+      if(!e.operands().empty())
+      {
+        for(exprt::operandst::const_iterator e_it=e.operands().begin();
+            e_it!=e.operands().end();e_it++)
+        {
+          unsigned depth=rename_required(*e_it,prev_unwinding);
+          if(depth) return depth;
+        }
+      }
+    }
+
+      return 0;
+
+}
+
+
+void ssa_local_unwindert::rename_invariant(exprt& e,const irep_idt& suffix) const
+{
+  if(e.id()==ID_symbol)
+  {
+    symbol_exprt& sym=to_symbol_expr(e);
+    irep_idt id = sym.get_identifier();
+
+    std::list<unsigned> iterations;
+    irep_idt basename;
+    dissect_loop_suffix(id,basename,iterations,true);
+
+
+    sym.set_identifier(id2string(basename)+id2string(suffix));
+  }
+  else
+  {
+    if(!e.operands().empty())
+    {
+      for(exprt::operandst::iterator e_it=e.operands().begin();
+          e_it!=e.operands().end();e_it++)
+      {
+        rename_invariant(*e_it,suffix);
+      }
+    }
+  }
+
+}
+/*****************************************************************************
+ *
+ *  Function : ssa_local_unwindert::rename_invariant
+ *
+ *  Input : inv_in - list of input invariants that is to be renamed for reuse
+ *
+ *  Output : inv_out - list of renamed invariants
+ *
+ *  Purpose : For the purpose of reuse of invariant, rename all
+ *
+ *
+ *****************************************************************************/
+void ssa_local_unwindert::rename_invariant(const exprt::operandst& inv_in,
+    std::vector<exprt>& inv_out,const unsigned prev_unwinding) const
+{
+
+  if(prev_unwinding==0 || prev_unwinding==std::numeric_limits<unsigned int>::max())
+  {
+    return;
+  }
+  for(std::vector<exprt>::const_iterator e_it=inv_in.begin();
+      e_it!=inv_in.end();e_it++)
+  {
+    unsigned depth=rename_required(*e_it,prev_unwinding);
+    if(depth==0) continue;
+
+    std::vector<unsigned> iter_vector(depth-1,current_unwinding-1);
+
+    do
+    {
+
+      irep_idt suffix;
+
+      for(std::vector<unsigned>::const_iterator vit=iter_vector.begin();
+          vit!=iter_vector.end();vit++)
+      {
+
+        suffix = id2string(suffix)+"%"+i2string(*vit);
+      }
+      suffix = id2string(suffix)+"%"+i2string(current_unwinding-1);
+      inv_out.push_back(*e_it);
+      exprt& e = inv_out.back();
+      rename_invariant(e,suffix);
+    } while(odometer_increment(iter_vector,current_unwinding));
+  }
+}
+
+exprt ssa_local_unwindert::rename_invariant(const exprt& inv_in) const
+{
+  if(inv_in.is_true()) return inv_in;
+
+  exprt::operandst inv_in_operands; 
+  if(inv_in.id()!=ID_and) inv_in_operands.push_back(inv_in);
+  else inv_in_operands = inv_in.operands();
+
+ std::vector<exprt> new_inv;
+ rename_invariant(inv_in_operands,new_inv,prev_unwinding);
+
+ return conjunction(new_inv);
+}
+
+
+bool ssa_local_unwindert::odometer_increment(std::vector<unsigned>& odometer,
+    unsigned base) const
+{
+  if(odometer.empty()) return false;
+  unsigned i=odometer.size()-1;
+  while(true)
+  {
+    if(odometer[i] < base-1) {odometer[i]++; return true;}
+    odometer[i]=0;
+    if(i==0) return false; //overflow
+    i--;
+
+  }
+return false;
+}
+
 /*****************************************************************************\
  *
  * Function : ssa_unwindert::unwind

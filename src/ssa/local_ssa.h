@@ -66,6 +66,10 @@ public:
       { 
       }
 
+    exprt enabling_expr; //for incremental unwinding
+
+    bool marked; //for incremental solving
+
     typedef std::vector<equal_exprt> equalitiest;
     equalitiest equalities;
 
@@ -74,12 +78,17 @@ public:
 
     typedef std::vector<exprt> assertionst;
     assertionst assertions;
+    exprt::operandst assertions_after_loop; //for k-induction assertion hoisting
+
+    typedef std::vector<exprt> assumptionst;
+    assertionst assumptions;
     
     typedef std::vector<function_application_exprt> function_callst;
     function_callst function_calls;
 
-    exprt enabling_expr; //for incremental unwinding
-    bool marked; //for incremental unwinding
+(??)    exprt enabling_expr; //for incremental unwinding
+(??)   
+(??)    bool marked; //for incremental unwinding
 
     //custom invariant templates
     typedef std::vector<exprt> templatest;
@@ -87,7 +96,6 @@ public:
 
     locationt location; //link to goto instruction
     std::list<nodet>::iterator loophead; //link to loop head node
-       // otherwise points to nodes.end() 
 
     void output(std::ostream &, const namespacet &) const;
 
@@ -183,7 +191,6 @@ public:
   nodest::iterator find_node(locationt loc);
   nodest::const_iterator find_node(locationt loc) const;
   void find_nodes(locationt loc, std::list<nodest::const_iterator> &_nodes) const;
-
   inline locationt get_location(unsigned location_number) const
   {
     location_mapt::const_iterator it=location_map.find(location_number);
@@ -204,12 +211,17 @@ protected:
   void build_guard(locationt loc);
   void build_function_call(locationt loc);
   void build_assertions(locationt loc);
+  void build_assumptions(locationt loc);
+  void assertions_after_loop();
 
   // custom templates
   void collect_custom_templates();
   replace_mapt template_newvars;
   exprt template_last_newvar;
 };
+
+std::vector<exprt> & operator <<
+  (std::vector<exprt> &dest, const local_SSAt &src);
 
 std::list<exprt> & operator <<
   (std::list<exprt> &dest, const local_SSAt &src);

@@ -370,6 +370,7 @@ Function: template_generator_baset::handle_special_functions
 void template_generator_baset::handle_special_functions(const local_SSAt &SSA)
 {
   const irep_idt &function_id = SSA.goto_function.body.instructions.front().function;
+
   if(id2string(function_id) == "__CPROVER_initialize")
   {
     options.set_option("intervals",true);
@@ -623,9 +624,9 @@ void template_generator_baset::instantiate_standard_domains(const local_SSAt &SS
     domain_ptr = new tpolyhedra_domaint(domain_number,
 					renaming_map);
     filter_template_domain();
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_difference_template(
-      var_specs, SSA.ns);
     static_cast<tpolyhedra_domaint *>(domain_ptr)->add_interval_template(
+      var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_difference_template(
       var_specs, SSA.ns);
   }
   else if(options.get_bool_option("octagons"))
@@ -633,11 +634,11 @@ void template_generator_baset::instantiate_standard_domains(const local_SSAt &SS
     domain_ptr = new tpolyhedra_domaint(domain_number,
 					renaming_map);
     filter_template_domain();
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_sum_template(
+    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_interval_template(
       var_specs, SSA.ns);
     static_cast<tpolyhedra_domaint *>(domain_ptr)->add_difference_template(
       var_specs, SSA.ns);
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_interval_template(
+    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_sum_template(
       var_specs, SSA.ns);
   }
   else if(options.get_bool_option("qzones"))

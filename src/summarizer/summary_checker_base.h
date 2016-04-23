@@ -59,6 +59,8 @@ protected:
   ssa_unwindert ssa_unwinder;
   ssa_inlinert ssa_inliner;
 
+  irep_idt entry_function;
+
   unsigned solver_instances;
   unsigned solver_calls;
   unsigned summaries_used;
@@ -75,9 +77,16 @@ protected:
 		 bool forward=true, bool termination=false);
 
   property_checkert::resultt check_properties();
+  property_checkert::resultt check_properties(
+     irep_idt function_name,
+     irep_idt entry_function,
+     std::set<irep_idt> seen_function_calls);
   void check_properties(
-		  const ssa_dbt::functionst::const_iterator f_it);
-
+    const ssa_dbt::functionst::const_iterator f_it,
+    irep_idt entry_function="");
+	
+  void error_summary_using_vars(const ssa_dbt::functionst::const_iterator f_it);
+  
   exprt::operandst get_loophead_selects(
     const irep_idt &function_name, const local_SSAt &, prop_convt &);
   bool is_spurious(const exprt::operandst& loophead_selects, 

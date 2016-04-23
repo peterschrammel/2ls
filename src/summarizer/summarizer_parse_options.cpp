@@ -142,6 +142,11 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   if(cmdline.isset("inline"))
     options.set_option("inline", true);
 
+  if(cmdline.isset("spurious-check"))
+    options.set_option("spurious-check", cmdline.get_value("spurious-check"));
+  else
+    options.set_option("spurious-check", "all");
+
   if(cmdline.isset("slice") && cmdline.isset("inline"))
     options.set_option("slice", true);
   else
@@ -201,6 +206,12 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   else
     options.set_option("assertions", true);
 
+  // SSA equality propagation
+  if(cmdline.isset("ssa-propagation"))
+    options.set_option("ssa-propagation", true);
+  else
+    options.set_option("ssa-propagation", false);
+
   // use assumptions
   if(cmdline.isset("no-assumptions"))
     options.set_option("assumptions", false);
@@ -213,6 +224,11 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   else
     options.set_option("refine", false);
 
+  if(cmdline.isset("unit-check"))
+    options.set_option("unit-check", true);
+  else
+    options.set_option("unit-check", false);
+  
   // compute standard invariants (include value at loop entry)
   if(cmdline.isset("std-invariants"))
     options.set_option("std-invariants", true);
@@ -293,7 +309,7 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   {
     options.set_option("std-invariants", true);
     options.set_option("k-induction", true);
-    options.set_option("inline", true);
+//    options.set_option("inline", true);
     if(!cmdline.isset("unwind"))
       options.set_option("unwind",UINT_MAX);
   }
@@ -302,17 +318,11 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   if(cmdline.isset("incremental-bmc"))
   {
     options.set_option("incremental-bmc", true);
-    options.set_option("inline", true);
+//    options.set_option("inline", true);
     options.set_option("havoc", true);
     if(!cmdline.isset("unwind"))
       options.set_option("unwind",UINT_MAX);
   }
-
-  // check for spuriousness of assertion failures
-  if(cmdline.isset("no-spurious-check"))
-    options.set_option("spurious-check", false);
-  else
-    options.set_option("spurious-check", true);
 
   // all properties (default)
   if(cmdline.isset("no-all-properties"))
@@ -1081,6 +1091,9 @@ bool summarizer_parse_optionst::process_goto_program(
       status() << "Constant Propagation" << eom;
       propagate_constants(goto_model);
     }
+	
+    //explicitly initialize all local variables
+    nondet_locals(goto_model);
 
     // if we aim to cover, replace
     // all assertions by false to prevent simplification
@@ -1460,6 +1473,7 @@ void summarizer_parse_optionst::help()
     "\n"
     "* *  2LS " SUMMARIZER_VERSION " - Copyright (C) 2015                         * *\n"
     "* *  (based on CBMC " CBMC_VERSION " ";
+    
   std::cout << "(" << (sizeof(void *)*8) << "-bit version))";
     
   std::cout << "                   * *\n";
@@ -1517,10 +1531,12 @@ void summarizer_parse_optionst::help()
     " --no-assumptions             ignore user assumptions\n"
     " --inline                     inline all functions into main\n"
     " --inline-partial nr          inline functions smaller than the given nr of instructions\n"
+    " --instrument-output f        output inferred information in goto-binary f\n"
     "\n"
     "Backend options:\n"
     " --termination                compute ranking functions to prove termination\n"
     " --k-induction                use k-induction\n"
+    " --unit-check                 check each function (similar to a unit test)\n"
     " --incremental-bmc            use incremental-bmc\n"
     " --preconditions              compute preconditions\n"
     " --sufficient                 sufficient preconditions (default: necessary)\n"

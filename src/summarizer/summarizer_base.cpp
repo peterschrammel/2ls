@@ -401,3 +401,45 @@ bool summarizer_baset::check_end_reachable(
 
   return result;
 }
+
+/*******************************************************************\
+
+Function: summarizer_baset::get_loophead_selects
+
+  Inputs:
+
+ Outputs:
+
+ Purpose: returns the select guards at the loop heads 
+          e.g. in order to check whether a countermodel is spurious
+
+\*******************************************************************/
+
+exprt::operandst summarizer_baset::get_loophead_selects(
+  const local_SSAt &SSA,
+  const ssa_local_unwindert &ssa_local_unwinder,
+  prop_convt &solver)
+{
+  exprt::operandst loophead_selects;
+  for(local_SSAt::nodest::const_iterator n_it = SSA.nodes.begin();
+      n_it != SSA.nodes.end(); n_it++)
+  {
+    if(n_it->loophead==SSA.nodes.end()) continue;
+    symbol_exprt lsguard = SSA.name(SSA.guard_symbol(),
+				    local_SSAt::LOOP_SELECT, n_it->location);
+    ssa_local_unwinder.unwinder_rename(lsguard,*n_it,true);
+    loophead_selects.push_back(not_exprt(lsguard));
+    solver.set_frozen(solver.convert(lsguard));
+  }
+  literalt loophead_selects_literal = solver.convert(conjunction(loophead_selects));
+  if(!loophead_selects_literal.is_constant())
+    solver.set_frozen(loophead_selects_literal);
+
+#if 0
+  std::cout << "loophead_selects: "
+	    << from_expr(SSA.ns,"",conjunction(loophead_selects))
+	    << std::endl;
+#endif
+
+  return loophead_selects;
+}

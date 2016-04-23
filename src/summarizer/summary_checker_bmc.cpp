@@ -25,6 +25,9 @@ property_checkert::resultt summary_checker_bmct::operator()(
   const goto_modelt &goto_model)
 {
   const namespacet ns(goto_model.symbol_table);
+  irep_idt entry_function = goto_model.goto_functions.entry_point();
+  if(options.get_bool_option("unit-check"))
+     entry_function = "";
 
   SSA_functions(goto_model,ns);
 
@@ -40,7 +43,8 @@ property_checkert::resultt summary_checker_bmct::operator()(
     status() << "Unwinding (k=" << unwind << ")" << messaget::eom;
     summary_db.mark_recompute_all();
     ssa_unwinder.unwind_all(unwind);
-    result =  check_properties(); 
+    std::set<irep_idt> seen_function_calls;
+    result =  check_properties(entry_function, entry_function, seen_function_calls); 
     if(result == property_checkert::PASS) 
     {
       status() << "incremental BMC proof found after " 
