@@ -105,9 +105,9 @@ LIBS =
 
 # $(CUDD)/obj/libobj.a 
 
-CLEANFILES = summarizer$(EXEEXT) $(DELTA_OBJ)
+CLEANFILES = 2ls$(EXEEXT) $(DELTA_OBJ)
 
-all: summarizer$(EXEEXT)
+all: 2ls$(EXEEXT)
 
 ifneq ($(wildcard $(CBMC)/src/cpp/Makefile),)
   OBJ += $(CBMC)/src/cpp/cpp$(LIBEXT)
@@ -121,6 +121,6 @@ endif
 
 ###############################################################################
 
-summarizer$(EXEEXT): $(OBJ)
+2ls$(EXEEXT): $(OBJ)
 	$(LINKBIN)
 
