@@ -26,6 +26,7 @@ public:
 
   void init();
 
+  void unwind_loop_at_location(unsigned loc, unsigned k);
   void unwind(unsigned k);
 
   //TODO: not yet sure how to do that
@@ -119,7 +120,8 @@ public:
 
   void init(bool is_kinduction, bool is_bmc);
   void init_localunwinders();
-
+  
+  void unwind_loop_alone(const irep_idt fname, unsigned loc, unsigned k);
   void unwind(const irep_idt fname, unsigned k);
   void unwind_all(unsigned k);
 
