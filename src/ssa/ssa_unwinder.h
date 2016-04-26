@@ -33,7 +33,7 @@ public:
 /*  void unwind(locationt loop_head_loc, unsigned k)
     { unwind(loops[loop_head_loc],k); } */
 
-  //TOOD: this should be loop specific in future, maybe move to unwindable_local_ssa as it is not really unwinder related
+  //TODO: this should be loop specific in future, maybe move to unwindable_local_ssa as it is not really unwinder related
   void loop_continuation_conditions(exprt::operandst& loop_cont) const;
 
   //TODO: these two should be possible with unwindable_local_ssa facilities
