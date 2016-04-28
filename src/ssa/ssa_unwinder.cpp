@@ -275,7 +275,7 @@ void ssa_local_unwindert::build_exit_conditions()
 
 void ssa_local_unwindert::unwind(unsigned k)
 {
-  if(SSA.current_unwinding >= k)
+  if(SSA.current_unwinding >= (long)k)
     return;
 
   current_enabling_expr = 
@@ -322,7 +322,7 @@ void ssa_local_unwindert::unwind(loopt &loop, unsigned k, bool is_new_parent)
 	    << std::endl;
 #endif
   SSA.increment_unwindings(1);
-  for(unsigned i = 0; i<=k; ++i)
+  for(long i = 0; i<=(long)k; ++i)
   {
     //add new unwindings of this loop
     if(i>loop.current_unwinding || is_new_parent)
@@ -353,7 +353,7 @@ void ssa_local_unwindert::unwind(loopt &loop, unsigned k, bool is_new_parent)
       add_assertions(loop,is_last);
       add_hoisted_assertions(loop,is_last);
     }
-    if(i==k)
+    if(i==(long)k)
     {
       add_loop_head(loop);
       //update loop head
