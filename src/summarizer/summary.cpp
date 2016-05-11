@@ -42,6 +42,11 @@ void summaryt::output(std::ostream &out, const namespacet &ns) const
       it != globals_out.end(); it++)
     out << from_expr(ns,"",*it) << " ";
   out << std::endl;
+  out << "nondets: ";
+  for(summaryt::expr_sett::const_iterator it = nondets.begin();
+      it != nondets.end(); it++)
+    out << from_expr(ns,"",*it) << " ";
+  out << std::endl;
   out << "forward precondition: " 
       << (fw_precondition.is_nil() ? "not computed" :  
 	  from_expr(ns,"",fw_precondition)) << std::endl;
