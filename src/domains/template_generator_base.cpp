@@ -322,6 +322,17 @@ void template_generator_baset::add_var(const domaint::vart &var,
   }
 }
 
+void template_generator_baset::add_vars(const std::set<exprt> &vars_to_add, 
+			     const domaint::guardt &pre_guard, 
+			     const domaint::guardt &post_guard,
+			     const domaint::kindt &kind,
+			     domaint::var_specst &var_specs)
+{
+  for(std::set<exprt>::const_iterator it = vars_to_add.begin();
+      it != vars_to_add.end(); it++) 
+    add_var(*it,pre_guard,post_guard,kind,var_specs);
+}
+
 void template_generator_baset::add_vars(const local_SSAt::var_listt &vars_to_add, 
 			     const domaint::guardt &pre_guard, 
 			     const domaint::guardt &post_guard,
