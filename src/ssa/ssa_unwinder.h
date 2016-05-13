@@ -66,6 +66,9 @@ protected:
     bool is_dowhile;
     bool is_root;
     long current_unwinding;
+
+    // to have an enabling_expr and current_unwindings (odometert)
+
     typedef std::map<exprt,exprt::operandst> exit_mapt;
     exit_mapt exit_map;
     std::map<symbol_exprt,symbol_exprt> pre_post_map;
