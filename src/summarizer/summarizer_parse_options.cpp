@@ -1091,9 +1091,6 @@ bool summarizer_parse_optionst::process_goto_program(
       status() << "Constant Propagation" << eom;
       propagate_constants(goto_model);
     }
-	
-    //explicitly initialize all local variables
-    nondet_locals(goto_model);
 
     // if we aim to cover, replace
     // all assertions by false to prevent simplification
