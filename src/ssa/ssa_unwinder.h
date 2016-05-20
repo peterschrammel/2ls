@@ -68,6 +68,8 @@ protected:
     long current_unwinding;
 
     // to have an enabling_expr and current_unwindings (odometert)
+    exprt::operandst loop_enabling_exprs;
+    exprt loop_enabling_expr_current;
 
     typedef std::map<exprt,exprt::operandst> exit_mapt;
     exit_mapt exit_map;
@@ -93,7 +95,7 @@ protected:
   void build_pre_post_map();
   void build_exit_conditions();
 
-  void unwind(loopt &loop, unsigned k, bool is_new_parent);
+  void unwind(loopt &loop, unsigned k, bool is_new_parent, bool propagate = false, unsigned prop_unwind = 0, unsigned prop_loc = 0);
 
   exprt get_continuation_condition(const loopt& loop) const;
   void loop_continuation_conditions(const loopt& loop, 

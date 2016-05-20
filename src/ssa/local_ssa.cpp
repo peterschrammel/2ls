@@ -1890,6 +1890,7 @@ Function: local_SSAt::get_enabling_expr
 
 exprt local_SSAt::get_enabling_exprs() const
 {
+  /*
   exprt::operandst result;
   result.reserve(enabling_exprs.size());
   for(std::list<symbol_exprt>::const_iterator it = enabling_exprs.begin();
@@ -1900,4 +1901,7 @@ exprt local_SSAt::get_enabling_exprs() const
     else result.push_back(*it);
   }
   return conjunction(result);
+  */
+
+  return combined_enabling_expr;
 }

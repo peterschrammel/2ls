@@ -43,7 +43,7 @@ property_checkert::resultt summary_checker_ait::operator()(
 
   /*********************************************************************************/
   /**************** code to test the loop-specific unwind function *****************/
-  /*
+  /**/
   if(unwind > 0){
     forall_goto_functions(f_it, goto_model.goto_functions){
       if(!f_it->second.body_available()) continue;
@@ -83,7 +83,7 @@ property_checkert::resultt summary_checker_ait::operator()(
     }
     
   }
-  */
+  /**/
   /*********************************************************************************/
 
   irep_idt entry_function = goto_model.goto_functions.entry_point();
