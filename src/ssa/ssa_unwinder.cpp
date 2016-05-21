@@ -531,7 +531,7 @@ void ssa_local_unwindert::add_loop_body(loopt &loop)
  *
  *  Output : 
  *
- *  Purpose : adds the new loop head
+ *  Purpose : adds the assertions
  *
  *****************************************************************************/
 
