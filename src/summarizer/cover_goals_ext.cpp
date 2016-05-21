@@ -193,31 +193,35 @@ void cover_goals_extt::assignment()
 	}
 	else
 	{
+          //filter out assertion instances that are not violated
 	  exprt::operandst failed_exprs;
 	  for(exprt::operandst::const_iterator c_it = 
 		conjunct_expr.operands().begin();
-	      c_it != conjunct_expr.operands().end(); c_it++)
+		c_it != conjunct_expr.operands().end(); c_it++)
 	  {
 	    literalt conjunct_literal = solver.convert(*c_it);
-	    if(solver.l_get(conjunct_literal).is_false())
+	    if(solver.l_get(conjunct_literal).is_true())
+	    {
+#ifdef DEBUG
+	      std::cout << "failed_expr: " 
+			<< from_expr(SSA.ns, "", *c_it) << std::endl;
+#endif
 	      failed_exprs.push_back(*c_it);
+	    }
 	  }
 	  solver.pop_context(); //otherwise this would interfere with necessary preconditions
-	  for(unsigned i=0; i<failed_exprs.size(); ++i)
-	  {
-	    summarizer_bw_cex.summarize(
-	      not_exprt(failed_exprs[i]));
-	    property_map[it->first].result = summarizer_bw_cex.check();
-	    if(property_map[it->first].result == 
+	  summarizer_bw_cex.summarize(not_exprt(conjunction(failed_exprs)));
+	  property_map[it->first].result = summarizer_bw_cex.check();
+	  if(property_map[it->first].result == 
 	       property_checkert::FAIL)
+	  {
+	    if(build_error_trace)
 	    {
-	      if(build_error_trace)
-	      {
-		ssa_build_goto_tracet build_goto_trace(SSA,solver.get_solver());
-		build_goto_trace(property_map[it->first].error_trace);		
-	      }
-	      break;
+	      ssa_build_goto_tracet build_goto_trace(SSA,solver.get_solver());
+	      build_goto_trace(property_map[it->first].error_trace);		
 	    }
+	    solver.new_context();
+	    break;
 	  }
 	  solver.new_context();
 	}

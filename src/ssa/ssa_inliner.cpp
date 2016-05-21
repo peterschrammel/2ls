@@ -2,7 +2,7 @@
 
 Module: SSA Inliner
 
-Author: Peter Schrammel
+Author: Peter Schrammel, Madhukar Kumar
 
 \*******************************************************************/
 
@@ -81,19 +81,12 @@ void ssa_inlinert::get_bindings(
 #endif
 
   //equalities for arguments
-  //bindings_in.push_back(get_replace_params(SSA.params,*f_it));
   get_replace_params(SSA,fSSA.params,n_it,*f_it,bindings_in,counter);
 
   //equalities for globals_in
-  //bindings_in.push_back(get_replace_globals_in(SSA.globals_in,cs_globals_in));
-
-  //get_replace_globals_in(fSSA.globals_in,cs_globals_in,bindings_in,counter);
   get_replace_globals_in(fSSA.globals_in,*f_it,cs_globals_in,bindings_in,counter);
 
   //equalities for globals out (including unmodified globals)
-  //bindings_out.push_back(get_replace_globals_out(SSA.globals_out,cs_globals_in,cs_globals_out));
-
-  //get_replace_globals_out(fSSA.globals_out,cs_globals_in,cs_globals_out,bindings_out,counter);
   get_replace_globals_out(fSSA.globals_out,*f_it,cs_globals_in,cs_globals_out,bindings_out,counter);
 
 }
@@ -124,16 +117,8 @@ void ssa_inlinert::get_summary(
   //getting globals at call site
   local_SSAt::var_sett cs_globals_in, cs_globals_out; 
   goto_programt::const_targett loc = n_it->location;
-  if(forward) 
-  {
-    SSA.get_globals(loc,cs_globals_in);
-    SSA.get_globals(loc,cs_globals_out,false);
-  }
-  else 
-  {
-    SSA.get_globals(loc,cs_globals_out);
-    SSA.get_globals(loc,cs_globals_in,false);
-  }
+ SSA.get_globals(loc,cs_globals_in);
+  SSA.get_globals(loc,cs_globals_out,false);
 
 #if 0
   std::cout << "cs_globals_in: ";
@@ -153,14 +138,7 @@ void ssa_inlinert::get_summary(
   get_replace_params(SSA,summary.params,n_it,*f_it,bindings,counter);
 
   //equalities for globals_in
-  if(forward){
-    //get_replace_globals_in(summary.globals_in,cs_globals_in,bindings,counter);
-    get_replace_globals_in(summary.globals_in,*f_it,cs_globals_in,bindings,counter);
-  }
-  else{
-    //get_replace_globals_in(summary.globals_out,cs_globals_out,bindings,counter);
-    get_replace_globals_in(summary.globals_out,*f_it,cs_globals_out,bindings,counter);
-  }
+  get_replace_globals_in(summary.globals_in,*f_it,cs_globals_in,bindings,counter);
 
   //constraints for transformer
 
@@ -193,14 +171,7 @@ void ssa_inlinert::get_summary(
 				    transformer));
   
   //equalities for globals out (including unmodified globals)
-  if(forward){
-    //get_replace_globals_out(summary.globals_out,cs_globals_in,cs_globals_out,bindings,counter);
     get_replace_globals_out(summary.globals_out,*f_it,cs_globals_in,cs_globals_out,bindings,counter);
-  }
-  else{
-    //get_replace_globals_out(summary.globals_in,cs_globals_out,cs_globals_in,bindings,counter);
-    get_replace_globals_out(summary.globals_in,*f_it,cs_globals_out,cs_globals_in,bindings,counter);
-  }
 }
 
 /*******************************************************************\
@@ -359,11 +330,6 @@ Function: ssa_inlinert::replace
 
 \*******************************************************************/
 
-/*
-void ssa_inlinert::replace(local_SSAt &SSA,
-			   const ssa_dbt &ssa_db, 
-			   bool recursive, bool rename)
-*/
 void ssa_inlinert::replace(local_SSAt &SSA,
 			   const ssa_dbt &ssa_db,
 			   int counter,
@@ -613,8 +579,6 @@ void ssa_inlinert::get_replace_params(const local_SSAt &SSA,
 				      exprt::operandst &c,
 				      int counter)
 {
-  //std::string suffix = id2string(funapp_expr.get(ID_suffix));
-
   //equalities for arguments
   local_SSAt::var_listt::const_iterator p_it = params.begin();
   for(exprt::operandst::const_iterator it = funapp_expr.arguments().begin();
@@ -660,9 +624,6 @@ void ssa_inlinert::get_replace_params(const local_SSAt &SSA,
 	exprt lhs = *p_it; //copy
 	rename(lhs,counter);
         c.push_back(equal_exprt(lhs,*it));
-        //symbol_exprt sexpr = to_symbol_expr(*it);
-        //sexpr.set_identifier(id2string(sexpr.get_identifier())+suffix);
-        //c.push_back(equal_exprt(lhs,sexpr));
       }
     }
 }
@@ -710,7 +671,7 @@ void ssa_inlinert::get_replace_globals_out(const local_SSAt::var_sett &globals_o
 					   int counter)
 {
   std::string suffix = id2string(funapp_expr.get(ID_suffix));
-  
+
   //equalities for globals_out
   for(summaryt::var_sett::const_iterator it = cs_globals_out.begin();
       it != cs_globals_out.end(); it++)
@@ -722,7 +683,8 @@ void ssa_inlinert::get_replace_globals_out(const local_SSAt::var_sett &globals_o
       symbol_exprt rhs;
       if(find_corresponding_symbol(*it,globals_out,rhs))
 	rename(rhs,counter);
-      else{
+      else
+      {
 	bool found = find_corresponding_symbol(*it,cs_globals_in,rhs);
 	assert(found);
 	rhs.set_identifier(id2string(rhs.get_identifier())+suffix);
@@ -1096,10 +1058,13 @@ bool ssa_inlinert::find_corresponding_symbol(const symbol_exprt &s,
       it != globals.end(); it++)
     {
 #if 0
-      std::cout << s_orig_id << " =?= " << get_original_identifier(*it) << std::endl;
+      std::cout << s.get_identifier() << " =?= " << it->get_identifier() << std::endl;
 #endif
       if(s_orig_id == get_original_identifier(*it))
 	{
+#if 0
+          std::cout << s.get_identifier() << " == " << it->get_identifier() << std::endl;
+#endif
 	  s_found = *it;
 	  return true;
 	}
