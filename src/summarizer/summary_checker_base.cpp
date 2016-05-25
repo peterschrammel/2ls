@@ -510,6 +510,8 @@ void summary_checker_baset::check_properties(
 
   solver.pop_context();
 
+  summarizer_bw_cex->get_reason(reason);
+
   debug() << "** " << cover_goals.number_covered()
            << " of " << cover_goals.size() << " failed ("
            << cover_goals.iterations() << " iterations)" << eom;
