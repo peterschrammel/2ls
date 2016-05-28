@@ -34,7 +34,10 @@ public:
     { unwind(loops[loop_head_loc],k); } */
 
   //TODO: this should be loop specific in future, maybe move to unwindable_local_ssa as it is not really unwinder related
-  void loop_continuation_conditions(exprt::operandst& loop_cont) const;
+  void compute_loop_continuation_conditions();
+  void loop_continuation_conditions(exprt::operandst &loop_cont) const;
+  void loop_continuation_conditions(const locationt& loop_id, 
+                                    exprt::operandst &loop_cont) const;
 
   //TODO: these two should be possible with unwindable_local_ssa facilities
   //exprt rename_invariant(const exprt& inv_in) const; 
@@ -71,6 +74,8 @@ protected:
     exprt::operandst loop_enabling_exprs;
     exprt loop_enabling_expr_current;
 
+    exprt::operandst current_continuation_conditions;
+
     typedef std::map<exprt,exprt::operandst> exit_mapt;
     exit_mapt exit_map;
     std::map<symbol_exprt,symbol_exprt> pre_post_map;
@@ -98,8 +103,7 @@ protected:
   void unwind(loopt &loop, unsigned k, bool is_new_parent, bool propagate = false, unsigned prop_unwind = 0, unsigned prop_loc = 0);
 
   exprt get_continuation_condition(const loopt& loop) const;
-  void loop_continuation_conditions(const loopt& loop, 
-				    exprt::operandst &loop_cont) const;
+  void compute_loop_continuation_conditions(loopt& loop);
   
   void add_loop_body(loopt &loop);
   void add_assertions(loopt &loop, bool is_last);

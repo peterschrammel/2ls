@@ -759,6 +759,36 @@ void ssa_local_unwindert::add_hoisted_assertions(loopt &loop, bool is_last)
 
 /*****************************************************************************\
  *
+ * Function : ssa_local_unwindert::compute_loop_continuation_conditions
+ *
+ * Input :
+ *
+ * Output :
+ *
+ * Purpose : compute loop continuation conditions for all loops in this function
+ *
+ *****************************************************************************/
+
+void ssa_local_unwindert::compute_loop_continuation_conditions()
+{
+  //clear old ones
+  for(loop_mapt::iterator it = loops.begin(); it != loops.end(); ++it)
+  {
+    it->second.current_continuation_conditions.clear();
+  }
+  //compute new
+  SSA.current_unwindings.clear();
+  for(loop_mapt::iterator it = loops.begin(); it != loops.end(); ++it)
+  {
+    if(!it->second.is_root)
+      continue;
+    compute_loop_continuation_conditions(it->second); //recursive
+    assert(SSA.current_unwindings.empty());
+  }
+}
+
+/*****************************************************************************\
+ *
  * Function : ssa_local_unwindert::loop_continuation_conditions
  *
  * Input :
@@ -770,17 +800,39 @@ void ssa_local_unwindert::add_hoisted_assertions(loopt &loop, bool is_last)
  *****************************************************************************/
 
 void ssa_local_unwindert::loop_continuation_conditions(
-  exprt::operandst& loop_cont) const
+  exprt::operandst &loop_cont) const
 {
-  SSA.current_unwindings.clear();
   for(loop_mapt::const_iterator it = loops.begin(); it != loops.end(); ++it)
   {
-    if(!it->second.is_root)
-      continue;
-    loop_continuation_conditions(it->second,loop_cont); //recursive
-    assert(SSA.current_unwindings.empty());
+    loop_cont.insert(loop_cont.end(), 
+                     it->second.current_continuation_conditions.begin(),
+                     it->second.current_continuation_conditions.end());
   }
 }
+
+/*****************************************************************************\
+ *
+ * Function : ssa_local_unwindert::loop_continuation_conditions
+ *
+ * Input :
+ *
+ * Output :
+ *
+ * Purpose : return loop continuation conditions for all instances 
+ *           of the given  loop in this function
+ *
+ *****************************************************************************/
+
+void ssa_local_unwindert::loop_continuation_conditions(
+  const locationt& loop_id, 
+  exprt::operandst &loop_cont) const
+{
+  const loopt &loop = loops.at(loop_id->location_number);
+  loop_cont.insert(loop_cont.end(), 
+                   loop.current_continuation_conditions.begin(),
+                   loop.current_continuation_conditions.end());
+}
+
 
 /*****************************************************************************
  *
@@ -804,7 +856,7 @@ exprt ssa_local_unwindert::get_continuation_condition(const loopt& loop) const
 
 /*****************************************************************************\
  *
- * Function : ssa_local_unwindert::loop_continuation_conditions
+ * Function : ssa_local_unwindert::compute_loop_continuation_conditions
  *
  * Input :
  *
@@ -814,18 +866,19 @@ exprt ssa_local_unwindert::get_continuation_condition(const loopt& loop) const
  *
  *****************************************************************************/
 
-void ssa_local_unwindert::loop_continuation_conditions(
-  const loopt& loop, exprt::operandst& loop_cont) const
+void ssa_local_unwindert::compute_loop_continuation_conditions(
+  loopt& loop)
 {
   SSA.increment_unwindings(1);
-  loop_cont.push_back(get_continuation_condition(loop)); //%0
+  loop.current_continuation_conditions.push_back(
+    get_continuation_condition(loop)); //%0
   for(long i=0; i<=loop.current_unwinding; ++i)
   {
     //recurse into child loops
-    for(std::vector<unsigned>::const_iterator l_it = loop.loop_nodes.begin();
+    for(std::vector<unsigned>::iterator l_it = loop.loop_nodes.begin();
 	l_it != loop.loop_nodes.end(); ++l_it)
     {
-      loop_continuation_conditions(loops.at(*l_it),loop_cont);
+      compute_loop_continuation_conditions(loops.at(*l_it));
     }
     SSA.increment_unwindings(0);
   }

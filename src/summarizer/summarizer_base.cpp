@@ -458,12 +458,12 @@ Function: summarizer_baset::get_loop_continues
 
 void summarizer_baset::get_loop_continues(
   const local_SSAt &SSA,   
-  const ssa_local_unwindert &ssa_local_unwinder,
-  prop_convt &solver,
+  ssa_local_unwindert &ssa_local_unwinder,
   exprt::operandst &loop_continues)
 {
   //TODO: this should be provided by unwindable_local_SSA
 
+  ssa_local_unwinder.compute_loop_continuation_conditions();
   ssa_local_unwinder.loop_continuation_conditions(loop_continues);
   if(loop_continues.size()==0) 
   {
@@ -482,6 +482,36 @@ void summarizer_baset::get_loop_continues(
   std::cout << "loophead_continues: " << from_expr(SSA.ns,"",disjunction(loop_continues)) << std::endl;
 #endif
 }
+
+void summarizer_baset::get_loop_continues(
+  const local_SSAt &SSA,   
+  const ssa_local_unwindert &ssa_local_unwinder,
+  const local_SSAt::locationt &loop_id,
+  exprt::operandst &loop_continues)
+{
+  //TODO: this should be provided by unwindable_local_SSA
+
+  ssa_local_unwinder.loop_continuation_conditions(loop_id, loop_continues);
+  if(loop_continues.size()==0) 
+  {
+    //TODO: this should actually be done transparently by the unwinder
+    for(local_SSAt::nodest::const_iterator n_it = SSA.nodes.begin();
+	n_it != SSA.nodes.end(); n_it++)
+    {
+      if(n_it->loophead==SSA.nodes.end()) continue;
+      if(n_it->loophead->location!=loop_id) continue;
+      symbol_exprt guard = SSA.guard_symbol(n_it->location);
+      symbol_exprt cond = SSA.cond_symbol(n_it->location);
+      loop_continues.push_back(and_exprt(guard,cond));
+      break;
+    }
+  }
+
+#if 0
+  std::cout << "loophead_continues: " << from_expr(SSA.ns,"",disjunction(loop_continues)) << std::endl;
+#endif
+}
+
 
 /*******************************************************************\
 

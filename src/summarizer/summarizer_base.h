@@ -49,8 +49,13 @@ class summarizer_baset : public messaget
 
   static void get_loop_continues(
     const local_SSAt &SSA,   
+    ssa_local_unwindert &ssa_local_unwinder,
+    exprt::operandst &loop_continues);
+
+  static void get_loop_continues(
+    const local_SSAt &SSA,   
     const ssa_local_unwindert &ssa_local_unwinder,
-    prop_convt &solver,
+    const local_SSAt::locationt &loop_id,
     exprt::operandst &loop_continues);
 
   static void get_loophead_selects(
