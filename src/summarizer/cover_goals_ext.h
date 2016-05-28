@@ -51,7 +51,6 @@ class cover_goals_extt:public messaget
 public:
   explicit inline cover_goals_extt(unwindable_local_SSAt &_SSA,
 				   incremental_solvert &_solver,
-				   const exprt::operandst& _loophead_selects,
 				   property_checkert::property_mapt &_property_map,
            bool _all_properties,
            bool _build_error_trace,

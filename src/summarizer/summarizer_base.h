@@ -59,11 +59,6 @@ class summarizer_baset : public messaget
     prop_convt &solver,
     exprt::operandst &loophead_selects);
 
-  static bool is_fully_unwound(
-    const exprt::operandst &loop_continues, 
-    const exprt::operandst &loophead_selects,
-    incremental_solvert &solver);
-
   inline unsigned get_number_of_solver_instances() { return solver_instances; }
   inline unsigned get_number_of_solver_calls() { return solver_calls; }
   inline unsigned get_number_of_summaries_used() { return summaries_used; }
@@ -109,6 +104,11 @@ class summarizer_baset : public messaget
   bool check_end_reachable(const function_namet &function_name,
 			   local_SSAt &SSA, 
 			   const exprt &cond);
+
+  bool is_fully_unwound(
+    const exprt::operandst &loop_continues, 
+    const exprt::operandst &loophead_selects,
+    incremental_solvert &solver);
 
   //statistics
   unsigned solver_instances;
