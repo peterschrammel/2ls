@@ -43,7 +43,7 @@ Function: cover_goals_extt::mark
 void cover_goals_extt::mark()
 {
   for(std::list<cover_goalt>::iterator
-	g_it=goals.begin();
+        g_it=goals.begin();
       g_it!=goals.end();
       g_it++)
     if(!g_it->covered &&
@@ -71,7 +71,7 @@ void cover_goals_extt::constraint()
   exprt::operandst disjuncts;
 
   for(std::list<cover_goalt>::const_iterator
-	g_it=goals.begin();
+        g_it=goals.begin();
       g_it!=goals.end();
       g_it++)
     if(!g_it->covered && !g_it->condition.is_false())
@@ -96,7 +96,7 @@ Function: cover_goals_extt::freeze_goal_variables
 void cover_goals_extt::freeze_goal_variables()
 {
   for(std::list<cover_goalt>::const_iterator
-	g_it=goals.begin();
+        g_it=goals.begin();
       g_it!=goals.end();
       g_it++)
     if(!g_it->condition.is_constant())
@@ -179,55 +179,41 @@ void cover_goals_extt::assignment()
     if(property_map[it->first].result==property_checkert::UNKNOWN &&
        solver.l_get(g_it->condition).is_true())
     {
-      if(spurious_check)
+      assert((g_it->cond_expression).id() == ID_not);
+      exprt conjunct_expr = (g_it->cond_expression).op0();
+        
+      if(conjunct_expr.id() != ID_and)
       {
-	assert((g_it->cond_expression).id() == ID_not);
-	exprt conjunct_expr = (g_it->cond_expression).op0();
-	      
-	if(conjunct_expr.id() != ID_and)
-	{
-	  solver.pop_context(); //otherwise this would interfere with necessary preconditions
-	  summarizer_bw_cex.summarize(g_it->cond_expression);
-	  property_map[it->first].result = summarizer_bw_cex.check();
-	  solver.new_context();
-	}
-	else
-	{
-          //filter out assertion instances that are not violated
-	  exprt::operandst failed_exprs;
-	  for(exprt::operandst::const_iterator c_it = 
-		conjunct_expr.operands().begin();
-		c_it != conjunct_expr.operands().end(); c_it++)
-	  {
-	    literalt conjunct_literal = solver.convert(*c_it);
-	    if(solver.l_get(conjunct_literal).is_true())
-	    {
-#ifdef DEBUG
-	      std::cout << "failed_expr: " 
-			<< from_expr(SSA.ns, "", *c_it) << std::endl;
-#endif
-	      failed_exprs.push_back(*c_it);
-	    }
-	  }
-	  solver.pop_context(); //otherwise this would interfere with necessary preconditions
-	  summarizer_bw_cex.summarize(not_exprt(conjunction(failed_exprs)));
-	  property_map[it->first].result = summarizer_bw_cex.check();
-	  if(property_map[it->first].result == 
-	       property_checkert::FAIL)
-	  {
-	    if(build_error_trace)
-	    {
-	      ssa_build_goto_tracet build_goto_trace(SSA,solver.get_solver());
-	      build_goto_trace(property_map[it->first].error_trace);		
-	    }
-	    solver.new_context();
-	    break;
-	  }
-	  solver.new_context();
-	}
+        solver.pop_context(); //otherwise this would interfere with necessary preconditions
+        summarizer_bw_cex.summarize(g_it->cond_expression);
+        property_map[it->first].result = summarizer_bw_cex.check();
+        solver.new_context();
       }
       else
-	property_map[it->first].result = property_checkert::FAIL;
+      {
+        //filter out assertion instances that are not violated
+        exprt::operandst failed_exprs;
+        for(exprt::operandst::const_iterator c_it = 
+              conjunct_expr.operands().begin();
+            c_it != conjunct_expr.operands().end(); c_it++)
+        {
+          literalt conjunct_literal = solver.convert(*c_it);
+          if(solver.l_get(conjunct_literal).is_true())
+            failed_exprs.push_back(*c_it);
+        }
+        solver.pop_context(); //otherwise this would interfere with necessary preconditions
+        summarizer_bw_cex.summarize(not_exprt(conjunction(failed_exprs)));
+        property_map[it->first].result = summarizer_bw_cex.check();
+        solver.new_context();
+      }
+    }
+    if(property_map[it->first].result == property_checkert::FAIL)
+    {
+      if(build_error_trace)
+      {
+        ssa_build_goto_tracet build_goto_trace(SSA,solver.get_solver());
+        build_goto_trace(property_map[it->first].error_trace);    
+      }
     }
     if(!all_properties &&
        property_map[it->first].result == property_checkert::FAIL) 
@@ -236,3 +222,4 @@ void cover_goals_extt::assignment()
   
   _iterations++; //statistics
 }
+  
