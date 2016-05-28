@@ -346,7 +346,6 @@ void summary_checker_baset::check_properties(
       solver << summary.fw_precondition;
   }
 
-
   //callee summaries
   solver << ssa_inliner.get_summaries(SSA);
 

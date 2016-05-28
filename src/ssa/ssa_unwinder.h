@@ -26,13 +26,14 @@ public:
 
   void init();
 
+  void unwind_loop_at_location(unsigned loc, unsigned k);
   void unwind(unsigned k);
 
   //TODO: not yet sure how to do that
 /*  void unwind(locationt loop_head_loc, unsigned k)
     { unwind(loops[loop_head_loc],k); } */
 
-  //TOOD: this should be loop specific in future, maybe move to unwindable_local_ssa as it is not really unwinder related
+  //TODO: this should be loop specific in future, maybe move to unwindable_local_ssa as it is not really unwinder related
   void loop_continuation_conditions(exprt::operandst& loop_cont) const;
 
   //TODO: these two should be possible with unwindable_local_ssa facilities
@@ -65,6 +66,11 @@ protected:
     bool is_dowhile;
     bool is_root;
     long current_unwinding;
+
+    // to have an enabling_expr and current_unwindings (odometert)
+    exprt::operandst loop_enabling_exprs;
+    exprt loop_enabling_expr_current;
+
     typedef std::map<exprt,exprt::operandst> exit_mapt;
     exit_mapt exit_map;
     std::map<symbol_exprt,symbol_exprt> pre_post_map;
@@ -89,7 +95,7 @@ protected:
   void build_pre_post_map();
   void build_exit_conditions();
 
-  void unwind(loopt &loop, unsigned k, bool is_new_parent);
+  void unwind(loopt &loop, unsigned k, bool is_new_parent, bool propagate = false, unsigned prop_unwind = 0, unsigned prop_loc = 0);
 
   exprt get_continuation_condition(const loopt& loop) const;
   void loop_continuation_conditions(const loopt& loop, 
@@ -119,7 +125,8 @@ public:
 
   void init(bool is_kinduction, bool is_bmc);
   void init_localunwinders();
-
+  
+  void unwind_loop_alone(const irep_idt fname, unsigned loc, unsigned k);
   void unwind(const irep_idt fname, unsigned k);
   void unwind_all(unsigned k);
 

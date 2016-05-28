@@ -19,6 +19,9 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/decision_procedure.h>
 #include <util/byte_operators.h>
 
+#include <util/simplify_expr.h>
+
+
 #include <goto-symex/adjust_float_expressions.h>
 
 #include <langapi/language_util.h>
@@ -594,8 +597,9 @@ void local_SSAt::build_function_call(locationt loc)
     for(exprt::operandst::iterator it =  f.arguments().begin();
 	it !=  f.arguments().end(); it++, i++)
     {      
-      symbol_exprt arg(id2string(fname)+
-	"#arg"+i2string(i)+"#"+i2string(loc->location_number),it->type());
+      //symbol_exprt arg(id2string(fname)+"#"+i2string(loc->location_number)+
+	//		     "#arg"+i2string(i),it->type());
+      symbol_exprt arg(id2string(fname)+"#arg"+i2string(i)+"#"+i2string(loc->location_number),it->type());
       const typet &argtype = ns.follow(it->type());
       if(argtype.id()==ID_struct)
       {
@@ -1891,6 +1895,7 @@ Function: local_SSAt::get_enabling_expr
 
 exprt local_SSAt::get_enabling_exprs() const
 {
+  /*
   exprt::operandst result;
   result.reserve(enabling_exprs.size());
   for(std::list<symbol_exprt>::const_iterator it = enabling_exprs.begin();
@@ -1901,4 +1906,15 @@ exprt local_SSAt::get_enabling_exprs() const
     else result.push_back(*it);
   }
   return conjunction(result);
+  */
+  
+  
+  if(combined_enabling_expr.is_not_nil()){
+    std::cout << "combined enabling expr:" << from_expr(ns, "", combined_enabling_expr) << "\n";
+    return combined_enabling_expr;
+  }
+  else{
+    std::cout << "combined enabling expr is nil; returning true\n";
+    return true_exprt();
+  }
 }
