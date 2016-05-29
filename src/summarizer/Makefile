@@ -52,6 +52,8 @@ DELTA_OBJ+=\
       ../ssa/replace_symbol_ext$(OBJEXT) \
       ../ssa/ssa_const_propagator$(OBJEXT) \
       ../ssa/ssa_dependency_graph$(OBJEXT) \
+      ../ssa/ssa_refiner_monolithic$(OBJEXT) \
+      ../ssa/ssa_refiner_selective$(OBJEXT) \
       ../functions/summary$(OBJEXT) \
       ../functions/get_function$(OBJEXT) \
       ../functions/path_util$(OBJEXT) \
