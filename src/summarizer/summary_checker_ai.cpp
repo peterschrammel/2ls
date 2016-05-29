@@ -41,6 +41,7 @@ property_checkert::resultt summary_checker_ait::operator()(
     ssa_unwinder.unwind_all(unwind);
   }
 
+#if 0
   /*********************************************************************************/
   /**************** code to test the loop-specific unwind function *****************/
   /**/
@@ -85,6 +86,7 @@ property_checkert::resultt summary_checker_ait::operator()(
   }
   /**/
   /*********************************************************************************/
+#endif
 
   irep_idt entry_function = goto_model.goto_functions.entry_point();
   if(options.get_bool_option("unit-check"))
