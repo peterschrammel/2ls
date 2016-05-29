@@ -60,7 +60,7 @@ public:
       std::list<nodet>::iterator _loophead) 
       : 
         enabling_expr(true_exprt()),
-	marked(false),
+        marked(false), function_calls_inlined(false),
         location(_location), 
         loophead(_loophead)
       { 
@@ -85,6 +85,7 @@ public:
     
     typedef std::vector<function_application_exprt> function_callst;
     function_callst function_calls;
+    bool function_calls_inlined;
 
     //custom invariant templates
     typedef std::vector<exprt> templatest;
@@ -112,12 +113,12 @@ public:
   void mark_nodes()
   {
     for(nodest::iterator n_it=nodes.begin();
-	n_it!=nodes.end(); n_it++) n_it->marked = true;
+        n_it!=nodes.end(); n_it++) n_it->marked = true;
   }
   void unmark_nodes()
   {
-      for(nodest::iterator n_it=nodes.begin();
-	        n_it!=nodes.end(); n_it++) n_it->marked = false;
+    for(nodest::iterator n_it=nodes.begin();
+        n_it!=nodes.end(); n_it++) n_it->marked = false;
   }
 
   // for incremental unwinding
