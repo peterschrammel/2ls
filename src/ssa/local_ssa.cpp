@@ -1895,26 +1895,11 @@ Function: local_SSAt::get_enabling_expr
 
 exprt local_SSAt::get_enabling_exprs() const
 {
-  /*
-  exprt::operandst result;
-  result.reserve(enabling_exprs.size());
-  for(std::list<symbol_exprt>::const_iterator it = enabling_exprs.begin();
-      it != enabling_exprs.end(); ++it)
-  {
-    std::list<symbol_exprt>::const_iterator lh = it; lh++;
-    if(lh != enabling_exprs.end()) result.push_back(not_exprt(*it));
-    else result.push_back(*it);
-  }
-  return conjunction(result);
-  */
-  
-  
-  if(combined_enabling_expr.is_not_nil()){
-    std::cout << "combined enabling expr:" << from_expr(ns, "", combined_enabling_expr) << "\n";
-    return combined_enabling_expr;
-  }
-  else{
-    std::cout << "combined enabling expr is nil; returning true\n";
-    return true_exprt();
-  }
+  exprt result = conjunction(enabling_exprs);
+
+#if 1
+  std::cout << "current enabling expr:" << from_expr(ns, "", result) << "\n";
+#endif
+
+  return result;
 }
