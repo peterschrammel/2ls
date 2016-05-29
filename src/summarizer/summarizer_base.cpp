@@ -415,12 +415,13 @@ Function: summarizer_baset::get_loophead_selects
 
 \*******************************************************************/
 
-exprt::operandst summarizer_baset::get_loophead_selects(
+void summarizer_baset::get_loophead_selects(
   const local_SSAt &SSA,
   const ssa_local_unwindert &ssa_local_unwinder,
-  prop_convt &solver)
+  prop_convt &solver,
+  exprt::operandst &loophead_selects)
 {
-  exprt::operandst loophead_selects;
+  //TODO: this should be provided by unwindable_local_SSA
   for(local_SSAt::nodest::const_iterator n_it = SSA.nodes.begin();
       n_it != SSA.nodes.end(); n_it++)
   {
@@ -440,6 +441,116 @@ exprt::operandst summarizer_baset::get_loophead_selects(
 	    << from_expr(SSA.ns,"",conjunction(loophead_selects))
 	    << std::endl;
 #endif
+}
 
-  return loophead_selects;
+/*******************************************************************\
+
+Function: summarizer_baset::get_loop_continues
+
+  Inputs:
+
+ Outputs:
+
+ Purpose: returns the loop continuation guards at the end of the
+          loops in order to check whether we can unroll further
+
+\*******************************************************************/
+
+void summarizer_baset::get_loop_continues(
+  const local_SSAt &SSA,   
+  ssa_local_unwindert &ssa_local_unwinder,
+  exprt::operandst &loop_continues)
+{
+  //TODO: this should be provided by unwindable_local_SSA
+
+  ssa_local_unwinder.compute_loop_continuation_conditions();
+  ssa_local_unwinder.loop_continuation_conditions(loop_continues);
+  if(loop_continues.size()==0) 
+  {
+    //TODO: this should actually be done transparently by the unwinder
+    for(local_SSAt::nodest::const_iterator n_it = SSA.nodes.begin();
+	n_it != SSA.nodes.end(); n_it++)
+    {
+      if(n_it->loophead==SSA.nodes.end()) continue;
+      symbol_exprt guard = SSA.guard_symbol(n_it->location);
+      symbol_exprt cond = SSA.cond_symbol(n_it->location);
+      loop_continues.push_back(and_exprt(guard,cond));
+    }
+  }
+
+#if 0
+  std::cout << "loophead_continues: " << from_expr(SSA.ns,"",disjunction(loop_continues)) << std::endl;
+#endif
+}
+
+void summarizer_baset::get_loop_continues(
+  const local_SSAt &SSA,   
+  const ssa_local_unwindert &ssa_local_unwinder,
+  const local_SSAt::locationt &loop_id,
+  exprt::operandst &loop_continues)
+{
+  //TODO: this should be provided by unwindable_local_SSA
+
+  ssa_local_unwinder.loop_continuation_conditions(loop_id, loop_continues);
+  if(loop_continues.size()==0) 
+  {
+    //TODO: this should actually be done transparently by the unwinder
+    for(local_SSAt::nodest::const_iterator n_it = SSA.nodes.begin();
+	n_it != SSA.nodes.end(); n_it++)
+    {
+      if(n_it->loophead==SSA.nodes.end()) continue;
+      if(n_it->loophead->location!=loop_id) continue;
+      symbol_exprt guard = SSA.guard_symbol(n_it->location);
+      symbol_exprt cond = SSA.cond_symbol(n_it->location);
+      loop_continues.push_back(and_exprt(guard,cond));
+      break;
+    }
+  }
+
+#if 0
+  std::cout << "loophead_continues: " << from_expr(SSA.ns,"",disjunction(loop_continues)) << std::endl;
+#endif
+}
+
+
+/*******************************************************************\
+
+Function: summarizer_baset::is_fully_unwound
+
+  Inputs:
+
+ Outputs:
+
+ Purpose: checks whether the loops have been fully unwound
+
+\*******************************************************************/
+
+bool summarizer_baset::is_fully_unwound(
+  const exprt::operandst &loop_continues, 
+  const exprt::operandst &loophead_selects,
+  incremental_solvert &solver)
+{
+  solver.new_context();
+  solver << and_exprt(conjunction(loophead_selects),
+		      disjunction(loop_continues));
+
+  solver_calls++; //statistics
+
+  switch(solver())
+  {
+  case decision_proceduret::D_SATISFIABLE:
+    solver.pop_context();
+    return false;
+    break;
+      
+  case decision_proceduret::D_UNSATISFIABLE:
+    solver.pop_context();
+    solver << conjunction(loophead_selects); 
+    return true;
+    break;
+
+  case decision_proceduret::D_ERROR:    
+  default:
+    throw "error from decision procedure";
+  }
 }
