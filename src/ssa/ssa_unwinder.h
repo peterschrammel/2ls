@@ -52,7 +52,6 @@ protected:
   const irep_idt fname;
   unwindable_local_SSAt& SSA;
   bool is_kinduction,is_bmc;
-  symbol_exprt current_enabling_expr; //TODO must become loop-specific
 
   class loopt //loop tree
   {
@@ -74,7 +73,6 @@ protected:
 
     // to have an enabling_expr and current_unwindings (odometert)
     exprt::operandst loop_enabling_exprs;
-    //exprt loop_enabling_expr_current; //seems superfluous
 
     exprt::operandst current_continuation_conditions;
 
