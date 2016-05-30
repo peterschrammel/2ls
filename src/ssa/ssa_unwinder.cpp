@@ -288,11 +288,7 @@ void ssa_local_unwindert::unwind_loop_at_location(unsigned loc, unsigned k)
     return;
 
   loopt &loop = loops[loc];
-  loop.loop_enabling_expr_current =
-	symbol_exprt("unwind$"+id2string(fname)+"$loc"+i2string(loc)+"$enable"+i2string(k),
-                 bool_typet());
-  
-  loop.loop_enabling_exprs.push_back(loop.loop_enabling_expr_current);
+  loop.loop_enabling_exprs.push_back(symbol_exprt("unwind$"+id2string(fname)+"$loc"+i2string(loc)+"$enable"+i2string(k),bool_typet()));
 
   //current_enabling_expr =
   //  symbol_exprt("unwind::"+id2string(fname)+"::enable"+i2string(k),
@@ -603,7 +599,7 @@ void ssa_local_unwindert::add_loop_head(loopt &loop)
   SSA.nodes.push_back(loop.body_nodes.front()); //copy loop head
   local_SSAt::nodet &node=SSA.nodes.back();
   node.marked = false;
-  node.enabling_expr = current_enabling_expr;
+  node.enabling_expr = loop.loop_enabling_exprs.back();
   for (local_SSAt::nodet::equalitiest::iterator e_it =
 	 node.equalities.begin(); e_it != node.equalities.end(); e_it++)
   {
