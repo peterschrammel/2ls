@@ -23,10 +23,12 @@ class ssa_inlinert : public messaget
  public:
   explicit ssa_inlinert(summary_dbt &_summary_db, 
                         ssa_dbt &_ssa_db) : 
-      counter(0),
+      counter(-1),
       summary_db(_summary_db),
       ssa_db(_ssa_db)
     {}
+
+  typedef std::map<local_SSAt::locationt, exprt::operandst> assertion_mapt;
 
   void get_guard_binding(const local_SSAt &SSA,
 			 const local_SSAt &fSSA,
@@ -56,8 +58,15 @@ class ssa_inlinert : public messaget
        exprt::operandst &assert_summaries,
        exprt::operandst &noassert_summaries,
 		   exprt::operandst &bindings,
+       assertion_mapt &assertion_map,
 		   int counter,
 		   bool error_summ);
+  void get_summaries(
+       const local_SSAt &SSA,
+		   bool forward,
+		   exprt::operandst &summaries,
+		   exprt::operandst &bindings,
+       assertion_mapt &assertion_map); //TODO: need to explicitly pass the correct counter
   void get_summaries(
        const local_SSAt &SSA,
 		   bool forward,
@@ -71,8 +80,19 @@ class ssa_inlinert : public messaget
        exprt::operandst &noassert_summaries,
        exprt::operandst &bindings,
        bool error_summ = false); //TODO: need to explicitly pass the correct counter
+  bool get_summaries(
+       const local_SSAt &SSA,
+       const summaryt::call_sitet &current_call_site,
+       bool forward,
+       exprt::operandst &assert_summaries,
+       exprt::operandst &noassert_summaries,
+       exprt::operandst &bindings,
+       assertion_mapt &assertion_map,
+       bool error_summ = false); //TODO: need to explicitly pass the correct counter
 
   exprt get_summaries(const local_SSAt &SSA); //TODO: need to explicitly pass the correct counter
+  exprt get_summaries(const local_SSAt &SSA,
+       assertion_mapt &assertion_map); //TODO: need to explicitly pass the correct counter
   
   void replace(local_SSAt &SSA,
 	       local_SSAt::nodest::iterator node,
@@ -146,7 +166,7 @@ class ssa_inlinert : public messaget
   void rename(exprt &expr, int counter);
   
  protected:
-  unsigned counter;
+  int counter;
   summary_dbt &summary_db;
   ssa_dbt &ssa_db;
 
