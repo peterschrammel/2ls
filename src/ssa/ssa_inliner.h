@@ -21,9 +21,11 @@ class ssa_dbt;
 class ssa_inlinert : public messaget
 {
  public:
-  explicit ssa_inlinert(summary_dbt &_summary_db) : 
-  counter(0),
-    summary_db(_summary_db)
+  explicit ssa_inlinert(summary_dbt &_summary_db, 
+                        ssa_dbt &_ssa_db) : 
+      counter(0),
+      summary_db(_summary_db),
+      ssa_db(_ssa_db)
     {}
 
   void get_guard_binding(const local_SSAt &SSA,
@@ -38,25 +40,37 @@ class ssa_inlinert : public messaget
 		    exprt::operandst &bindings_in,
 		    exprt::operandst &bindings_out,
 		    int counter);
-  void get_summary(const local_SSAt &SSA,
+  bool get_summary(const local_SSAt &SSA,
 		   local_SSAt::nodest::const_iterator n_it,
 		   local_SSAt::nodet::function_callst::const_iterator f_it, 
-		   const summaryt &summary,
 		   bool forward, 
-		   exprt::operandst &summaries,
+       exprt::operandst &assert_summaries,
+       exprt::operandst &noassert_summaries,
 		   exprt::operandst &bindings,
 		   int counter,
 		   bool error_summ = false);
-  void get_summaries(const local_SSAt &SSA,
-		     bool forward,
-		     exprt::operandst &summaries,
-		     exprt::operandst &bindings); //TODO: need to explicitly pass the correct counter
-  bool get_summaries(const local_SSAt &SSA,
-                     const summaryt::call_sitet &current_call_site,
-		     bool forward,
-		     exprt::operandst &assert_summaries,
-		     exprt::operandst &noassert_summaries,
-		     exprt::operandst &bindings); //TODO: need to explicitly pass the correct counter
+  bool get_inlined(const local_SSAt &SSA,
+		   local_SSAt::nodest::const_iterator n_it,
+		   local_SSAt::nodet::function_callst::const_iterator f_it, 
+		   bool forward, 
+       exprt::operandst &assert_summaries,
+       exprt::operandst &noassert_summaries,
+		   exprt::operandst &bindings,
+		   int counter,
+		   bool error_summ);
+  void get_summaries(
+       const local_SSAt &SSA,
+		   bool forward,
+		   exprt::operandst &summaries,
+		   exprt::operandst &bindings); //TODO: need to explicitly pass the correct counter
+  bool get_summaries(
+       const local_SSAt &SSA,
+       const summaryt::call_sitet &current_call_site,
+       bool forward,
+       exprt::operandst &assert_summaries,
+       exprt::operandst &noassert_summaries,
+       exprt::operandst &bindings,
+       bool error_summ = false); //TODO: need to explicitly pass the correct counter
 
   exprt get_summaries(const local_SSAt &SSA); //TODO: need to explicitly pass the correct counter
   
@@ -134,6 +148,7 @@ class ssa_inlinert : public messaget
  protected:
   unsigned counter;
   summary_dbt &summary_db;
+  ssa_dbt &ssa_db;
 
   local_SSAt::nodest new_nodes;
   local_SSAt::nodet::equalitiest new_equs;

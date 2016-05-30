@@ -23,7 +23,7 @@ Author: Peter Schrammel
 //#define NO_ARITH_REFINEMENT
 //#define NON_INCREMENTAL // (experimental)
 
-//#define DISPLAY_FORMULA
+#define DISPLAY_FORMULA
 //#define DEBUG_FORMULA
 //#define DEBUG_OUTPUT
 

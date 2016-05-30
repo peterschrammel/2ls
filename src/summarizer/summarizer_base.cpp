@@ -421,6 +421,8 @@ void summarizer_baset::get_loophead_selects(
   prop_convt &solver,
   exprt::operandst &loophead_selects)
 {
+  //TODO: need to ask ssa_inliner regarding inlined functions
+
   //TODO: this should be provided by unwindable_local_SSA
   for(local_SSAt::nodest::const_iterator n_it = SSA.nodes.begin();
       n_it != SSA.nodes.end(); n_it++)
@@ -489,6 +491,8 @@ void summarizer_baset::get_loop_continues(
   const local_SSAt::locationt &loop_id,
   exprt::operandst &loop_continues)
 {
+  //TODO: need to ask ssa_inliner regarding inlined functions
+
   //TODO: this should be provided by unwindable_local_SSA
 
   ssa_local_unwinder.loop_continuation_conditions(loop_id, loop_continues);
