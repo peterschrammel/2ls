@@ -85,6 +85,7 @@ ranking_solver_enumerationt::progresst ranking_solver_enumerationt::iterate(inva
 	debug() << "inner solve()" << eom;
 	solver_calls++;
 	if(inner_solver() == decision_proceduret::D_SATISFIABLE && 
+     //TODO: not sure where number_inner_iterations is used
 	   number_inner_iterations < max_inner_iterations) 
 	{ 
 
