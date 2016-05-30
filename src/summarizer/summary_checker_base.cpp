@@ -201,11 +201,14 @@ Function: summary_checker_baset::check_properties
 summary_checker_baset::resultt summary_checker_baset::check_properties()
 {
   std::set<irep_idt> seen_function_calls;
-  return check_properties("", "", seen_function_calls);
+  return check_properties("", "", seen_function_calls, false);
 }
 
 summary_checker_baset::resultt summary_checker_baset::check_properties(
-  irep_idt function_name, irep_idt entry_function, std::set<irep_idt> seen_function_calls)
+  irep_idt function_name, 
+  irep_idt entry_function, 
+  std::set<irep_idt> seen_function_calls,
+  bool is_inlined)
 {
   if(function_name!="")
   {
@@ -235,15 +238,19 @@ summary_checker_baset::resultt summary_checker_baset::check_properties(
 #endif
           if(seen_function_calls.find(fname) == seen_function_calls.end()){
             seen_function_calls.insert(fname);
-            check_properties(fname, entry_function, seen_function_calls);
+            check_properties(fname, entry_function, seen_function_calls,
+              n_it->function_calls_inlined);
           }
         }
       }
     }
 
-    //now check function itself
-    status() << "Checking properties of " << f_it->first << messaget::eom;
-    check_properties(f_it, entry_function);
+    if(!is_inlined)
+    {
+      //now check function itself
+      status() << "Checking properties of " << f_it->first << messaget::eom;
+      check_properties(f_it, entry_function);
+    }
   }
   else // check all the functions
   {
@@ -372,10 +379,12 @@ void summary_checker_baset::check_properties(
   //callee summaries
   solver << ssa_inliner.get_summaries(SSA);
 
+#if 0
   //freeze loop head selects
   exprt::operandst loophead_selects;
   summarizer_baset::get_loophead_selects(SSA,
     ssa_unwinder.get(f_it->first),*solver.solver, loophead_selects);
+#endif
 
   //spuriousness checkers
   summarizer_bw_cex_baset *summarizer_bw_cex = NULL;
@@ -598,56 +607,6 @@ void summary_checker_baset::do_show_vcc(
   std::cout << "{1} " << from_expr(SSA.ns, "", *a_it) << "\n";
   
   std::cout << "\n";
-}
-
-
-/*******************************************************************\
-
-Function: summary_checker_baset::is_spurious
-
-  Inputs:
-
- Outputs:
-
- Purpose: checks whether a countermodel is spurious
-
-\*******************************************************************/
-
-bool summary_checker_baset::is_spurious(const exprt::operandst &loophead_selects, 
-                                        incremental_solvert &solver)
-{
-  //check loop head choices in model
-  bool invariants_involved = false;
-  for(exprt::operandst::const_iterator l_it = loophead_selects.begin();
-      l_it != loophead_selects.end(); l_it++)
-  {
-    if(solver.get(l_it->op0()).is_true()) 
-    {
-      invariants_involved = true; 
-      break;
-    }
-  }
-  if(!invariants_involved) return false;
-  
-  // force avoiding paths going through invariants
-  solver << conjunction(loophead_selects);
-
-  solver_calls++; //statistics
-
-  switch(solver())
-  {
-  case decision_proceduret::D_SATISFIABLE:
-    return false;
-    break;
-      
-  case decision_proceduret::D_UNSATISFIABLE:
-    return true;
-    break;
-
-  case decision_proceduret::D_ERROR:    
-  default:
-    throw "error from decision procedure";
-  }
 }
 
 /*******************************************************************\
