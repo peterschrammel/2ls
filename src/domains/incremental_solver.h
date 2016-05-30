@@ -19,11 +19,10 @@ Author: Peter Schrammel
 #include "domain.h"
 #include "util.h"
 
-//#define DISPLAY_FORMULA
 //#define NO_ARITH_REFINEMENT
 //#define NON_INCREMENTAL // (experimental)
 
-#define DISPLAY_FORMULA
+//#define DISPLAY_FORMULA
 //#define DEBUG_FORMULA
 //#define DEBUG_OUTPUT
 
@@ -93,8 +92,21 @@ class incremental_solvert : public messaget
     solver->set_assumptions(whole_formula);
 #endif
 #endif
-
+#if defined(DEBUG_FORMULA) && defined(DEBUG_OUTPUT)
+    decision_proceduret::resultt result = (*solver)();
+    if(result==decision_proceduret::D_UNSATISFIABLE)
+    {
+      for(unsigned i=0; i<formula_expr.size(); i++) 
+      {
+        if(solver->is_in_conflict(formula[i]))
+          std::cout << "is_in_conflict: " 
+              << from_expr(ns, "", formula_expr[i]) << std::endl;
+      }
+    }
+    return result;
+#else
     return (*solver)();    
+#endif
   }
 
   exprt get(const exprt& expr) { return solver->get(expr); }
@@ -123,6 +135,7 @@ class incremental_solvert : public messaget
 
   //for debugging
   bvt formula;
+  exprt::operandst formula_expr;
   void debug_add_to_formula(const exprt &expr);
 
   //context assumption literals
