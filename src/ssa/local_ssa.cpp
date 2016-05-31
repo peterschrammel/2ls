@@ -1907,7 +1907,7 @@ exprt local_SSAt::get_enabling_exprs() const
 {
   exprt result = conjunction(enabling_exprs);
 
-#if 1
+#if 0
   std::cout << "current enabling expr:" << from_expr(ns, "", result) << "\n";
 #endif
 

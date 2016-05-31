@@ -23,7 +23,7 @@ Author: Peter Schrammel
 //#define NO_ARITH_REFINEMENT
 //#define NON_INCREMENTAL // (experimental)
 
-#define DISPLAY_FORMULA
+//#define DISPLAY_FORMULA
 //#define DEBUG_FORMULA
 //#define DEBUG_OUTPUT
 
@@ -154,7 +154,7 @@ class incremental_solvert : public messaget
   //for debugging
   bvt formula;
   exprt::operandst formula_expr;
-  void debug_add_to_formula(const exprt &expr);
+  void debug_add_to_formula(const exprt &expr, exprt activation=nil_exprt());
 
   //context assumption literals
   bvt activation_literals;
@@ -217,8 +217,8 @@ static inline incremental_solvert & operator << (
     *dest.solver << src;
 #else
   if(!dest.activation_literals.empty())
-    dest.debug_add_to_formula(
-      or_exprt(src,literal_exprt(!dest.activation_literals.back())));
+    dest.debug_add_to_formula(src,
+                              literal_exprt(!dest.activation_literals.back()));
   else 
     dest.debug_add_to_formula(src);
 #endif
