@@ -103,6 +103,17 @@ find_symbols_sett summarizer_bw_cex_completet::inline_summaries
 
   solver << enable_exprs;
 
+  // assumptions must hold
+  for(local_SSAt::nodest::const_iterator 
+	n_it = SSA.nodes.begin(); n_it != SSA.nodes.end(); ++n_it)
+    for(local_SSAt::nodet::assumptionst::const_iterator 
+	  a_it = n_it->assumptions.begin(); a_it != n_it->assumptions.end(); ++a_it)
+    {
+      exprt assumption = *a_it;
+      ssa_inliner.rename(assumption, counter);
+      solver << assumption;
+    }
+
 #ifdef REFINE_ALL
   //TODO: let's just put all loops into the reason
   for(local_SSAt::nodest::iterator n_it = SSA.nodes.begin();
@@ -250,7 +261,7 @@ find_symbols_sett summarizer_bw_cex_completet::inline_summaries
       */
       /////////////////////////////////////////////////////////////////////////////////////
 
-#if 0
+#ifdef REFINE_ALL
       //TODO: just put all function calls into reason
       reason[function_name].functions.insert(depnode.location);
 #endif
@@ -287,20 +298,28 @@ find_symbols_sett summarizer_bw_cex_completet::inline_summaries
     }
 
     // if the dependency set is non-empty
-    if(!worknode.dependency_set.empty()){
+    if(!worknode.dependency_set.empty())
+    {
       exprt worknode_info = depnode.node_info;
 
       bool is_error_assertion = false;
-      assert(error_assertion.id()==ID_not);
-      if(error_assertion.op0().id()!=ID_and)
-        is_error_assertion = (worknode_info == error_assertion.op0());
-      else
-        forall_operands(a_it, error_assertion.op0())
-          if(worknode_info == *a_it)
-          {
-            is_error_assertion = true;
-            break;
-          }
+      if(depnode.is_assertion)
+      {
+#if 0
+        std::cout << "assertion: " << from_expr(SSA.ns, "", error_assertion) << std::endl;
+        std::cout << "to check: " << from_expr(SSA.ns, "", worknode_info) << std::endl;
+#endif
+        assert(error_assertion.id()==ID_not);
+        if(error_assertion.op0().id()!=ID_and)
+          is_error_assertion = (worknode_info == error_assertion.op0());
+        else
+          forall_operands(a_it, error_assertion.op0())
+            if(worknode_info == *a_it)
+            {
+              is_error_assertion = true;
+              break;
+            }
+      }
       
       if(worknode.node_index != 0){
         if(!(depnode.is_function_call)){

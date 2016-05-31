@@ -79,7 +79,7 @@ void summary_checker_baset::SSA_dependency_graphs(
     else
       ssa_db.depgraph_create(f_it->first, ns, ssa_inliner, false); // change to true if all functions are to be treated equal
 
-#if 0	  
+#if 1
     ssa_dependency_grapht &ssa_depgraph = ssa_db.get_depgraph(f_it->first);
     ssa_depgraph.output(debug()); debug() << eom;
     std::cout << "output SSA for function: " << f_it->first << "\n";
@@ -201,16 +201,20 @@ Function: summary_checker_baset::check_properties
 summary_checker_baset::resultt summary_checker_baset::check_properties()
 {
   std::set<irep_idt> seen_function_calls;
-  return check_properties("", "", seen_function_calls);
+  return check_properties("", "", seen_function_calls, false);
 }
 
 summary_checker_baset::resultt summary_checker_baset::check_properties(
-  irep_idt function_name, irep_idt entry_function, std::set<irep_idt> seen_function_calls)
+  irep_idt function_name, 
+  irep_idt entry_function, 
+  std::set<irep_idt> seen_function_calls,
+  bool is_inlined)
 {
   if(function_name!="")
   {
     ssa_dbt::functionst::const_iterator f_it = 
       ssa_db.functions().find(function_name);
+    assert(f_it != ssa_db.functions().end());
     local_SSAt &SSA = *f_it->second;
 
     // call recursively for all function calls first
@@ -223,25 +227,30 @@ summary_checker_baset::resultt summary_checker_baset::check_properties(
       {
         assert(ff_it->function().id()==ID_symbol); //no function pointers
         irep_idt fname = to_symbol_expr(ff_it->function()).get_identifier();
+        
         //ENHANCE?: can the return value be exploited?
-
-        if(!summary_db.exists(fname) ||	
-           summary_db.get(fname).bw_transformer.is_nil())
+        if(ssa_db.functions().find(fname)!=ssa_db.functions().end() &&
+           (!summary_db.exists(fname) ||	
+            summary_db.get(fname).bw_transformer.is_nil()))
         {
 #if 0
           debug() << "Checking call " << fname << messaget::eom;
 #endif
           if(seen_function_calls.find(fname) == seen_function_calls.end()){
             seen_function_calls.insert(fname);
-            check_properties(fname, entry_function, seen_function_calls);
+            check_properties(fname, entry_function, seen_function_calls,
+              n_it->function_calls_inlined);
           }
         }
       }
     }
 
-    //now check function itself
-    status() << "Checking properties of " << f_it->first << messaget::eom;
-    check_properties(f_it, entry_function);
+    if(!is_inlined)
+    {
+      //now check function itself
+      status() << "Checking properties of " << f_it->first << messaget::eom;
+      check_properties(f_it, entry_function);
+    }
   }
   else // check all the functions
   {
@@ -302,24 +311,7 @@ void summary_checker_baset::check_properties(
   unwindable_local_SSAt &SSA = *f_it->second;
 
   //check whether function has assertions
-  //  SSA.goto_function.body.has_assertion() has become too semantic
-  bool has_assertion = false;
-  for(goto_programt::instructionst::const_iterator
-        i_it=SSA.goto_function.body.instructions.begin();
-      i_it!=SSA.goto_function.body.instructions.end();
-      i_it++)
-  {
-    if(!i_it->is_assert())
-      continue;
-  
-    irep_idt property_id = i_it->source_location.get_property_id();
-    
-    if(i_it->guard.is_true())
-      property_map[property_id].result=PASS;
-    else
-      has_assertion=true;
-  }
-  if(!has_assertion)
+  if(!has_assertion(f_it->first))
     return;
 
   bool all_properties = options.get_bool_option("all-properties");
@@ -367,13 +359,9 @@ void summary_checker_baset::check_properties(
       solver << summary.fw_precondition;
   }
 
-  //callee summaries
-  solver << ssa_inliner.get_summaries(SSA);
-
-  //freeze loop head selects
-  exprt::operandst loophead_selects;
-  summarizer_baset::get_loophead_selects(SSA,
-    ssa_unwinder.get(f_it->first),*solver.solver, loophead_selects);
+  //callee summaries and inlined functions
+  ssa_inlinert::assertion_mapt assertion_map;
+  solver << ssa_inliner.get_summaries(SSA, assertion_map);
 
   //spuriousness checkers
   summarizer_bw_cex_baset *summarizer_bw_cex = NULL;
@@ -427,61 +415,38 @@ void summary_checker_baset::check_properties(
     all_properties, build_error_trace,
     *summarizer_bw_cex);
 
-#if 0   
-  debug() << "(C) " << from_expr(SSA.ns,"",enabling_expr) << eom;
-#endif
-
-  const goto_programt &goto_program=SSA.goto_function.body;
-
-  for(goto_programt::instructionst::const_iterator
-        i_it=goto_program.instructions.begin();
-      i_it!=goto_program.instructions.end();
-      i_it++)
+  for(ssa_inlinert::assertion_mapt::const_iterator
+        aa_it=assertion_map.begin();
+      aa_it!=assertion_map.end();
+      aa_it++)
   {
-    if(!i_it->is_assert())
-      continue;
-  
-    const source_locationt &location=i_it->source_location;  
-    std::list<local_SSAt::nodest::const_iterator> assertion_nodes;
-    SSA.find_nodes(i_it,assertion_nodes);
-
-    irep_idt property_id = location.get_property_id();
-    
-    if(i_it->guard.is_true())
-    {
-      property_map[property_id].result=PASS;
-      continue;
-    }
+    irep_idt property_id = aa_it->first->source_location.get_property_id();
 
     //do not recheck properties that have already been decided
-    if(property_map[property_id].result!=UNKNOWN) continue; 
+    if(property_map[property_id].result!=UNKNOWN) 
+      continue; 
 
+#if 0
     if(property_id=="") //TODO: some properties do not show up in initialize_property_map
       continue;     
+#endif
 
-    unsigned property_counter = 0;
-    for(std::list<local_SSAt::nodest::const_iterator>::const_iterator
-          n_it=assertion_nodes.begin();
-        n_it!=assertion_nodes.end();
-        n_it++)
+    for(exprt::operandst::const_iterator
+          a_it=aa_it->second.begin();
+        a_it!=aa_it->second.end();
+        a_it++)
     {
-      for(local_SSAt::nodet::assertionst::const_iterator
-            a_it=(*n_it)->assertions.begin();
-          a_it!=(*n_it)->assertions.end();
-          a_it++, property_counter++)
-      {
-        exprt property=*a_it;
+      exprt property=*a_it;
 
-        if(simplify)
-          property=::simplify_expr(property, SSA.ns);
+      if(simplify)
+        property=::simplify_expr(property, SSA.ns);
 
-#if 0 
-        std::cout << "property: " << from_expr(SSA.ns, "", property) << std::endl;
+#if 1
+      std::cout << "property: " << from_expr(SSA.ns, "", property) << std::endl;
 #endif
  
-        property_map[property_id].location = i_it;
-        cover_goals.goal_map[property_id].conjuncts.push_back(property);
-      }
+      property_map[property_id].location = aa_it->first;
+      cover_goals.goal_map[property_id].conjuncts.push_back(property);
     }
   }
     
@@ -598,56 +563,6 @@ void summary_checker_baset::do_show_vcc(
   std::cout << "\n";
 }
 
-
-/*******************************************************************\
-
-Function: summary_checker_baset::is_spurious
-
-  Inputs:
-
- Outputs:
-
- Purpose: checks whether a countermodel is spurious
-
-\*******************************************************************/
-
-bool summary_checker_baset::is_spurious(const exprt::operandst &loophead_selects, 
-                                        incremental_solvert &solver)
-{
-  //check loop head choices in model
-  bool invariants_involved = false;
-  for(exprt::operandst::const_iterator l_it = loophead_selects.begin();
-      l_it != loophead_selects.end(); l_it++)
-  {
-    if(solver.get(l_it->op0()).is_true()) 
-    {
-      invariants_involved = true; 
-      break;
-    }
-  }
-  if(!invariants_involved) return false;
-  
-  // force avoiding paths going through invariants
-  solver << conjunction(loophead_selects);
-
-  solver_calls++; //statistics
-
-  switch(solver())
-  {
-  case decision_proceduret::D_SATISFIABLE:
-    return false;
-    break;
-      
-  case decision_proceduret::D_UNSATISFIABLE:
-    return true;
-    break;
-
-  case decision_proceduret::D_ERROR:    
-  default:
-    throw "error from decision procedure";
-  }
-}
-
 /*******************************************************************\
 
 Function: summary_checker_baset::instrument_and_output
@@ -670,4 +585,54 @@ void summary_checker_baset::instrument_and_output(goto_modelt &goto_model)
   write_goto_binary(filename, 
                     goto_model.symbol_table, 
                     goto_model.goto_functions, get_message_handler());
+}
+
+/*******************************************************************\
+
+Function: summary_checker_baset::has_assertion
+
+  Inputs:
+
+ Outputs: 
+
+ Purpose: searches recursively for assertions in inlined functions
+
+\*******************************************************************/
+
+bool summary_checker_baset::has_assertion(irep_idt function_name)
+{
+  //  SSA.goto_function.body.has_assertion() has become too semantic
+  bool _has_assertion = false;
+  const local_SSAt &SSA = ssa_db.get(function_name);
+
+  for(local_SSAt::nodest::const_iterator 
+	  n_it = SSA.nodes.begin(); n_it != SSA.nodes.end(); ++n_it)
+  {
+    for(local_SSAt::nodet::assertionst::const_iterator 
+	    a_it = n_it->assertions.begin(); a_it != n_it->assertions.end(); ++a_it)
+    {
+      irep_idt property_id = n_it->location->source_location.get_property_id();
+    
+      if(n_it->location->guard.is_true())
+        property_map[property_id].result=PASS;
+      else
+        _has_assertion=true;
+    }
+    if(!n_it->function_calls_inlined)
+      continue;
+
+    for(local_SSAt::nodet::function_callst::const_iterator 
+	    f_it = n_it->function_calls.begin(); 
+        f_it != n_it->function_calls.end(); ++f_it)
+    {
+      irep_idt fname = to_symbol_expr(f_it->function()).get_identifier();
+      if(ssa_db.functions().find(fname)==ssa_db.functions().end())
+        continue;
+
+      bool new_has_assertion = has_assertion(fname); //recurse
+      _has_assertion = _has_assertion || new_has_assertion;
+    }
+  }
+
+  return _has_assertion;
 }
