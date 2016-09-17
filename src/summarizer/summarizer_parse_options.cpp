@@ -70,8 +70,9 @@ Function: summarizer_parse_optionst::summarizer_parse_optionst
 \*******************************************************************/
 
 summarizer_parse_optionst::summarizer_parse_optionst(int argc, const char **argv):
-  parse_options_baset(SUMMARIZER_OPTIONS, argc, argv),
-  language_uit("2LS " CBMC_VERSION, cmdline)
+parse_options_baset(SUMMARIZER_OPTIONS, argc, argv),
+  language_uit(cmdline, ui_message_handler),
+  ui_message_handler(cmdline, "2LS " SUMMARIZER_VERSION)
 {
 }
   
@@ -1042,7 +1043,7 @@ bool summarizer_parse_optionst::process_goto_program(
    
  
 #if UNWIND_GOTO_INTO_LOOP
-    goto_unwind(goto_model,2);
+    unwind_goto_into_loop(goto_model,2);
 #endif
 
     remove_skip(goto_model.goto_functions);
