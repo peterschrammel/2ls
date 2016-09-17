@@ -1,6 +1,6 @@
 include ../config.inc
 
-SRC = summarizer_base.cpp  \
+SRC = summarizer_base.cpp summarizer_languages.cpp  \
       summarizer_fw.cpp summarizer_bw.cpp \
       summarizer_fw_term.cpp summarizer_bw_term.cpp \
       summarizer_bw_cex.cpp summarizer_bw_cex_complete.cpp \
@@ -15,7 +15,8 @@ SRC = summarizer_base.cpp  \
       cover_goals_ext.cpp horn_encoding.cpp \
       summary_db.cpp summary.cpp ssa_db.cpp \
       array_abstraction.cpp preprocessing_util.cpp \
-      instrument_goto.cpp function_signature.cpp
+      instrument_goto.cpp 
+#function_signature.cpp
 
 OBJ+= $(CBMC)/src/ansi-c/ansi-c$(LIBEXT) \
       $(CBMC)/src/linking/linking$(LIBEXT) \
@@ -33,6 +34,7 @@ OBJ+= $(CBMC)/src/ansi-c/ansi-c$(LIBEXT) \
 
 DELTA_OBJ+=\
       $(CBMC)/src/goto-instrument/unwind$(OBJEXT) \
+      $(CBMC)/src/goto-instrument/loop_utils$(OBJEXT) \
       ../ssa/local_ssa$(OBJEXT) \
       ../ssa/malloc_ssa$(OBJEXT) \
       ../ssa/ssa_domain$(OBJEXT) \
@@ -54,11 +56,6 @@ DELTA_OBJ+=\
       ../ssa/ssa_dependency_graph$(OBJEXT) \
       ../ssa/ssa_refiner_monolithic$(OBJEXT) \
       ../ssa/ssa_refiner_selective$(OBJEXT) \
-      ../functions/summary$(OBJEXT) \
-      ../functions/get_function$(OBJEXT) \
-      ../functions/path_util$(OBJEXT) \
-      ../functions/index$(OBJEXT) \
-      ../functions/index$(OBJEXT) \
       ../domains/fixed_point$(OBJEXT) \
       ../domains/ssa_fixed_point$(OBJEXT) \
       ../domains/tpolyhedra_domain$(OBJEXT) \

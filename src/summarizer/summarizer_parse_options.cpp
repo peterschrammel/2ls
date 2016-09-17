@@ -294,18 +294,18 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   if(cmdline.isset("lexicographic-ranking-function"))
   {
     options.set_option("lexicographic-ranking-function", 
-		       cmdline.get_value("lexicographic-ranking-function"));
+                       cmdline.get_value("lexicographic-ranking-function"));
   }
   else options.set_option("lexicographic-ranking-function",3);
 
   if(cmdline.isset("max-inner-ranking-iterations"))
   {
     options.set_option("max-inner-ranking-iterations", 
-		       cmdline.get_value("max-inner-ranking-iterations"));
+                       cmdline.get_value("max-inner-ranking-iterations"));
   }
   else options.set_option("max-inner-ranking-iterations",20);
 
- // do k-induction refinement
+  // do k-induction refinement
   if(cmdline.isset("k-induction"))
   {
     options.set_option("std-invariants", true);
@@ -315,7 +315,7 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
       options.set_option("unwind",UINT_MAX);
   }
 
- // do incremental bmc
+  // do incremental bmc
   if(cmdline.isset("incremental-bmc"))
   {
     options.set_option("incremental-bmc", true);
@@ -341,7 +341,7 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   // instrumentation / output
   if(cmdline.isset("instrument-output"))
     options.set_option("instrument-output", 
-		       cmdline.get_value("instrument-output"));
+                       cmdline.get_value("instrument-output"));
   
 
 #ifdef SHOW_CALLING_CONTEXTS
@@ -351,7 +351,7 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
       throw "--show-calling-contexts only possible with --intervals";
     options.set_option("show-calling-contexts", true);
     options.set_option("do-not-analyze-functions", 
-		       cmdline.get_value("show-calling-contexts"));
+                       cmdline.get_value("show-calling-contexts"));
   }
 #endif
 
@@ -397,10 +397,9 @@ int summarizer_parse_optionst::doit()
   //
   status() << "2LS version " SUMMARIZER_VERSION " (based on CBMC " CBMC_VERSION ")" << eom;
 
-  register_language(new_ansi_c_language);
-  register_language(new_cpp_language);
-
   goto_modelt goto_model;
+
+  register_languages();
 
   if(get_goto_program(options, goto_model))
     return 6;
@@ -502,13 +501,13 @@ int summarizer_parse_optionst::doit()
     summary_checker_baset *summary_checker = NULL;
     if(!options.get_bool_option("k-induction") && 
        !options.get_bool_option("incremental-bmc"))
-       summary_checker = new summary_checker_ait(options);
+      summary_checker = new summary_checker_ait(options);
     if(options.get_bool_option("k-induction") && 
        !options.get_bool_option("incremental-bmc")) 
-       summary_checker = new summary_checker_kindt(options);
+      summary_checker = new summary_checker_kindt(options);
     if(!options.get_bool_option("k-induction") && 
        options.get_bool_option("incremental-bmc")) 
-       summary_checker = new summary_checker_bmct(options);
+      summary_checker = new summary_checker_bmct(options);
     
     summary_checker->set_message_handler(get_message_handler());
     summary_checker->simplify=!cmdline.isset("no-simplify");
@@ -537,11 +536,11 @@ int summarizer_parse_optionst::doit()
       }
       else
       {
-        #ifdef _MSC_VER
+#ifdef _MSC_VER
         std::ofstream out(widen(out_file).c_str());
-        #else
+#else
         std::ofstream out(out_file.c_str());
-        #endif
+#endif
         
         if(!out)
         {
@@ -605,20 +604,20 @@ int summarizer_parse_optionst::doit()
     return 8;
   }
 
-  #if 0                                         
+#if 0                                         
   // let's log some more statistics
   debug() << "Memory consumption:" << messaget::endl;
   memory_info(debug());
   debug() << eom;
-  #endif
+#endif
 }
 
 
 
 void summarizer_parse_optionst::type_stats_rec(
-    const typet &type,
-    expr_statst &stats,
-    const namespacet &ns)
+  const typet &type,
+  expr_statst &stats,
+  const namespacet &ns)
 {
 
   if(type.id()==ID_symbol)
@@ -661,8 +660,8 @@ Function: summarizer_parse_optionst::expr_stats_rec
 
 
 void summarizer_parse_optionst::expr_stats_rec(
-    const exprt &expr,
-    expr_statst &stats)
+  const exprt &expr,
+  expr_statst &stats)
 {
   
   if(expr.id()==ID_side_effect)
@@ -708,7 +707,7 @@ Function: summarizer_parse_optionst::show_stats
 \*******************************************************************/
 
 void summarizer_parse_optionst::show_stats(const goto_modelt &goto_model,
-                                          std::ostream &out)
+                                           std::ostream &out)
 {
 
   const namespacet ns(goto_model.symbol_table);
@@ -734,9 +733,9 @@ void summarizer_parse_optionst::show_stats(const goto_modelt &goto_model,
 #endif
 
     for(goto_programt::instructionst::const_iterator
-      i_it=goto_program.instructions.begin();
-      i_it!=goto_program.instructions.end();
-      i_it++)
+          i_it=goto_program.instructions.begin();
+        i_it!=goto_program.instructions.end();
+        i_it++)
     {
       nr_instructions++;
       const goto_programt::instructiont &instruction=*i_it;
@@ -745,32 +744,32 @@ void summarizer_parse_optionst::show_stats(const goto_modelt &goto_model,
 
       switch(instruction.type)
       {
-        case ASSIGN:
-          {
-            const code_assignt &assign=to_code_assign(instruction.code);
-            expr_stats_rec(assign.lhs(), stats);          
-            expr_stats_rec(assign.rhs(), stats);          
-          }
-          break;
-        case ASSUME:
-          expr_stats_rec(instruction.guard, stats);
-          break;
-        case ASSERT:
-          expr_stats_rec(instruction.guard, stats);
-          break;
-        case GOTO:
-          expr_stats_rec(instruction.guard, stats);
-          break;
+      case ASSIGN:
+      {
+        const code_assignt &assign=to_code_assign(instruction.code);
+        expr_stats_rec(assign.lhs(), stats);          
+        expr_stats_rec(assign.rhs(), stats);          
+      }
+      break;
+      case ASSUME:
+        expr_stats_rec(instruction.guard, stats);
+        break;
+      case ASSERT:
+        expr_stats_rec(instruction.guard, stats);
+        break;
+      case GOTO:
+        expr_stats_rec(instruction.guard, stats);
+        break;
           
-        case DECL:
-        	// someone declaring an array
-	        type_stats_rec(to_code_decl(instruction.code).symbol().type(), stats, ns);
+      case DECL:
+        // someone declaring an array
+        type_stats_rec(to_code_decl(instruction.code).symbol().type(), stats, ns);
         
-        	break;  
+        break;  
           
-        default:
-          // skip
-          break;
+      default:
+        // skip
+        break;
       } // switch
     } // forall instructions
   } // forall functions
@@ -876,7 +875,7 @@ bool summarizer_parse_optionst::get_goto_program(
       status() << "Reading GOTO program from file" << eom;
 
       if(read_goto_binary(cmdline.args[0],
-           goto_model, get_message_handler()))
+                          goto_model, get_message_handler()))
         return true;
         
       config.set_from_symbol_table(goto_model.symbol_table);
@@ -897,11 +896,11 @@ bool summarizer_parse_optionst::get_goto_program(
       
       std::string filename=cmdline.args[0];
       
-      #ifdef _MSC_VER
+#ifdef _MSC_VER
       std::ifstream infile(widen(filename).c_str());
-      #else
+#else
       std::ifstream infile(filename.c_str());
-      #endif
+#endif
                 
       if(!infile)
       {
@@ -946,7 +945,7 @@ bool summarizer_parse_optionst::get_goto_program(
         return true;
       }
 
-      #if 0
+#if 0
       irep_idt entry_point=goto_model.goto_functions.entry_point();
       
       if(symbol_table.symbols.find(entry_point)==symbol_table.symbols.end())
@@ -954,7 +953,7 @@ bool summarizer_parse_optionst::get_goto_program(
         error() << "No entry point; please provide a main function" << eom;
         return true;
       }
-      #endif
+#endif
       
       status() << "Generating GOTO Program" << eom;
 
@@ -1025,9 +1024,9 @@ bool summarizer_parse_optionst::process_goto_program(
       Forall_goto_functions(f_it, goto_model.goto_functions)
         if(f_it->first!=ID__start &&
            f_it->second.body.instructions.size()<=2*(limit/2))
-	{
+        {
           f_it->second.body.clear();
-	}
+        }
     }
     
     // add generic checks
@@ -1056,7 +1055,7 @@ bool summarizer_parse_optionst::process_goto_program(
       if(goto_inline(goto_model, ui_message_handler))
       {
         report_unknown();
-	return 5;
+        return 5;
       }
     }
 
@@ -1067,7 +1066,7 @@ bool summarizer_parse_optionst::process_goto_program(
     nondet_locals(goto_model);
 
 #if 1
-  //TODO: find a better place for that
+    //TODO: find a better place for that
     replace_malloc(goto_model,"");
 #endif
 
@@ -1177,7 +1176,7 @@ void summarizer_parse_optionst::report_properties(
   const property_checkert::property_mapt &property_map)
 {
   for(property_checkert::property_mapt::const_iterator
-      it=property_map.begin();
+        it=property_map.begin();
       it!=property_map.end();
       it++)
   {
@@ -1209,8 +1208,8 @@ void summarizer_parse_optionst::report_properties(
     if(cmdline.isset("json-cex") &&
        it->second.result==property_checkert::FAIL)
       output_json_cex(options,
-		      goto_model, it->second.error_trace,
-		      id2string(it->first));
+                      goto_model, it->second.error_trace,
+                      id2string(it->first));
   }
 
   if(!cmdline.isset("property"))
@@ -1221,7 +1220,7 @@ void summarizer_parse_optionst::report_properties(
     unsigned unknown=0;
 
     for(property_checkert::property_mapt::const_iterator
-        it=property_map.begin();
+          it=property_map.begin();
         it!=property_map.end();
         it++)
     {
@@ -1262,13 +1261,13 @@ void summarizer_parse_optionst::report_success()
     break;
     
   case ui_message_handlert::XML_UI:
-    {
-      xmlt xml("cprover-status");
-      xml.data="SUCCESS";
-      std::cout << xml;
-      std::cout << std::endl;
-    }
-    break;
+  {
+    xmlt xml("cprover-status");
+    xml.data="SUCCESS";
+    std::cout << xml;
+    std::cout << std::endl;
+  }
+  break;
     
   default:
     assert(false);
@@ -1301,12 +1300,12 @@ void summarizer_parse_optionst::show_counterexample(
     break;
   
   case ui_message_handlert::XML_UI:
-    {
-      xmlt xml;
-      convert(ns, error_trace, xml);
-      std::cout << xml << std::endl;
-    }
-    break;
+  {
+    xmlt xml;
+    convert(ns, error_trace, xml);
+    std::cout << xml << std::endl;
+  }
+  break;
   
   default:
     assert(false);
@@ -1405,13 +1404,13 @@ void summarizer_parse_optionst::report_failure()
     break;
     
   case ui_message_handlert::XML_UI:
-    {
-      xmlt xml("cprover-status");
-      xml.data="FAILURE";
-      std::cout << xml;
-      std::cout << std::endl;
-    }
-    break;
+  {
+    xmlt xml("cprover-status");
+    xml.data="FAILURE";
+    std::cout << xml;
+    std::cout << std::endl;
+  }
+  break;
     
   default:
     assert(false);
@@ -1440,13 +1439,13 @@ void summarizer_parse_optionst::report_unknown()
     break;
     
   case ui_message_handlert::XML_UI:
-    {
-      xmlt xml("cprover-status");
-      xml.data="UNKNOWN";
-      std::cout << xml;
-      std::cout << std::endl;
-    }
-    break;
+  {
+    xmlt xml("cprover-status");
+    xml.data="UNKNOWN";
+    std::cout << xml;
+    std::cout << std::endl;
+  }
+  break;
     
   default:
     assert(false);
@@ -1501,12 +1500,12 @@ void summarizer_parse_optionst::help()
     " --show-symbol-table          show symbol table\n"
     " --show-goto-functions        show goto program\n"
     " --arch                       set architecture (default: "
-                                   << configt::this_architecture() << ")\n"
+            << configt::this_architecture() << ")\n"
     " --os                         set operating system (default: "
-                                   << configt::this_operating_system() << ")\n"
-    #ifdef _WIN32
+            << configt::this_operating_system() << ")\n"
+#ifdef _WIN32
     " --gcc                        use GCC as preprocessor\n"
-    #endif
+#endif
     " --no-arch                    don't set up an architecture\n"
     " --no-library                 disable built-in abstract C library\n"
     " --round-to-nearest           IEEE floating point rounding mode (default)\n"
