@@ -8,6 +8,8 @@
 #include <util/simplify_expr.h>
 #include <langapi/languages.h>
 
+#include "simplify_bounds.h"
+
 #define SYMB_BOUND_VAR "symb_bound#"
 
 #define ENABLE_HEURISTICS
@@ -588,6 +590,7 @@ void tpolyhedra_domaint::project_on_vars(valuet &value,
     }
   }
   result = conjunction(c);
+  simplify_bounds(result, ns);
 }
 
 /*******************************************************************\
