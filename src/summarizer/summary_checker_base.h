@@ -36,7 +36,8 @@ public:
     ssa_inliner(summary_db, ssa_db),
     solver_instances(0),
     solver_calls(0),
-    summaries_used(0)
+    summaries_used(0),
+    termargs_computed(0)
   {
     ssa_inliner.set_message_handler(get_message_handler());
   }
@@ -67,6 +68,7 @@ protected:
   unsigned solver_instances;
   unsigned solver_calls;
   unsigned summaries_used;
+  unsigned termargs_computed;
   void report_statistics();
 
   void do_show_vcc(

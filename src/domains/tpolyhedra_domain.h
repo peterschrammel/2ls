@@ -30,8 +30,11 @@ public:
 
   typedef std::vector<template_rowt> templatet;
 
-  tpolyhedra_domaint(unsigned _domain_number, replace_mapt &_renaming_map) :
-    domaint(_domain_number,_renaming_map),current_refinement(0)
+  tpolyhedra_domaint(unsigned _domain_number, 
+		     replace_mapt &_renaming_map,
+		     const namespacet &_ns) :
+  domaint(_domain_number,_renaming_map, _ns),
+  current_refinement(0)
   {}
 
   // initialize value

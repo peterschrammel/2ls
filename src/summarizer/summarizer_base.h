@@ -34,7 +34,8 @@ class summarizer_baset : public messaget
     nonpassed_assertions(false),
     solver_instances(0),
     solver_calls(0),
-    summaries_used(0)
+    summaries_used(0),
+    termargs_computed(0)
   {}
 
   typedef summaryt::predicatet preconditiont;
@@ -67,6 +68,7 @@ class summarizer_baset : public messaget
   inline unsigned get_number_of_solver_instances() { return solver_instances; }
   inline unsigned get_number_of_solver_calls() { return solver_calls; }
   inline unsigned get_number_of_summaries_used() { return summaries_used; }
+  inline unsigned get_number_of_termargs_computed() { return termargs_computed; }
 
  protected:
   optionst &options;
@@ -119,6 +121,7 @@ class summarizer_baset : public messaget
   unsigned solver_instances;
   unsigned solver_calls;
   unsigned summaries_used;
+  unsigned termargs_computed;
 };
 
 

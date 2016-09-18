@@ -283,6 +283,7 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
   {
     options.set_option("termination", true);
     options.set_option("sufficient", true);
+    options.set_option("std-invariants", true);
   }
 
   if(cmdline.isset("monolithic-ranking-function"))
@@ -330,6 +331,12 @@ void summarizer_parse_optionst::get_command_line_options(optionst &options)
     options.set_option("all-properties", false);
   else
     options.set_option("all-properties", true);
+
+  // no all functions (default)
+  if(cmdline.isset("all-functions"))
+    options.set_option("all-functions", true);
+  else
+    options.set_option("all-functions", false);
 
   // competition mode
   if(cmdline.isset("competition-mode"))
@@ -519,8 +526,8 @@ int summarizer_parse_optionst::doit()
       std::cout << "VERIFICATION CONDITIONS:\n\n";
       summary_checker->show_vcc=true;
       (*summary_checker)(goto_model);
-      retval = 0;
-      goto clean_up;
+      delete summary_checker;
+      return 0;
     }
 
     if(cmdline.isset("horn-encoding"))
@@ -546,35 +553,41 @@ int summarizer_parse_optionst::doit()
         {
           error() << "Failed to open output file "
                   << out_file << eom;
+          delete summary_checker;
           return 1;
         }
         
         horn_encoding(goto_model, out);
       }
         
-      return 7;
+      delete summary_checker;
+      return 0;
     }
     
+    bool report_assertions = 
+      !options.get_bool_option("preconditions") &&
+      !options.get_bool_option("termination");
     // do actual analysis
     switch((*summary_checker)(goto_model))
     {
     case property_checkert::PASS:
-      report_properties(options,goto_model, summary_checker->property_map);
+      if(report_assertions) 
+        report_properties(options,goto_model, summary_checker->property_map);
       report_success();
       retval = 0;
       break;
     
     case property_checkert::FAIL:
-      report_properties(options,goto_model, summary_checker->property_map);
+      if(report_assertions) 
+        report_properties(options,goto_model, summary_checker->property_map);
       report_failure();
       retval = 10;
       break;
 
     case property_checkert::UNKNOWN:
+      if(report_assertions) 
+        report_properties(options,goto_model, summary_checker->property_map);
       retval = 5;
-      if(options.get_bool_option("preconditions")) 
-	goto clean_up;
-      report_properties(options,goto_model, summary_checker->property_map);
       report_unknown();
       break;
     
@@ -587,7 +600,6 @@ int summarizer_parse_optionst::doit()
       summary_checker->instrument_and_output(goto_model);
     }
 
-  clean_up:
     delete summary_checker;
     return retval;
   }
@@ -1531,13 +1543,15 @@ void summarizer_parse_optionst::help()
     " --instrument-output f        output inferred information in goto-binary f\n"
     "\n"
     "Backend options:\n"
+    " --all-functions              check each function as entry point\n"
+    " --no-all-properties          stop on first failing assertion\n"
+    " --context-sensitive          context-sensitive analysis from entry point\n"
     " --termination                compute ranking functions to prove termination\n"
     " --k-induction                use k-induction\n"
     " --unit-check                 check each function (similar to a unit test)\n"
     " --incremental-bmc            use incremental-bmc\n"
     " --preconditions              compute preconditions\n"
     " --sufficient                 sufficient preconditions (default: necessary)\n"
-    " --context-sensitive          context-sensitive analysis from entry point\n"
     " --havoc                      havoc loops and function calls\n"
     " --intervals                  use interval domain\n"
     " --equalities                 use equalities and disequalities domain\n"

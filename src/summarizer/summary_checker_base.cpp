@@ -170,7 +170,8 @@ void summary_checker_baset::summarize(const goto_modelt &goto_model,
 
   summarizer->set_message_handler(get_message_handler());
 
-  if(!options.get_bool_option("context-sensitive"))
+  if(!options.get_bool_option("context-sensitive") &&
+     options.get_bool_option("all-functions"))
     summarizer->summarize();
   else
     summarizer->summarize(goto_model.goto_functions.entry_point());
@@ -179,6 +180,7 @@ void summary_checker_baset::summarize(const goto_modelt &goto_model,
   solver_instances += summarizer->get_number_of_solver_instances();
   solver_calls += summarizer->get_number_of_solver_calls();
   summaries_used += summarizer->get_number_of_summaries_used();
+  termargs_computed += summarizer->get_number_of_termargs_computed();
 
   delete summarizer;
 }
@@ -524,6 +526,8 @@ void summary_checker_baset::report_statistics()
   statistics() << "  number of solver calls: " << solver_calls << eom;
   statistics() << "  number of summaries used: " 
                << summaries_used << eom;
+  statistics() << "  number of termination arguments computed: " 
+               << termargs_computed << eom;
   statistics() << eom;
 }
   
