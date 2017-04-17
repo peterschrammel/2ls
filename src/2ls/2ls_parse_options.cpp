@@ -149,6 +149,11 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   if(cmdline.isset("inline"))
     options.set_option("inline", true);
 
+  if(cmdline.isset("spurious-check"))
+    options.set_option("spurious-check", cmdline.get_value("spurious-check"));
+  else
+    options.set_option("spurious-check", "all");
+
   if(cmdline.isset("slice") && cmdline.isset("inline"))
     options.set_option("slice", true);
   else

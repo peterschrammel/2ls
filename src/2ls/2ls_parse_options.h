@@ -52,6 +52,7 @@ class optionst;
   "(no-spurious-check)(all-functions)" \
   "(no-simplify)(no-fixed-point)" \
   "(graphml-witness):(json-cex):" \
+  "(spurious-check):(no-all-properties)" \
   "(no-spurious-check)(stop-on-fail)" \
   "(competition-mode)(slice)(no-propagation)(independent-properties)" \
   "(no-unwinding-assertions)"
