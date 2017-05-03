@@ -49,7 +49,7 @@ class optionst;
   "(show-goto-functions)(show-guards)(show-defs)(show-ssa)(show-assignments)" \
   "(show-invariants)(std-invariants)" \
   "(property):(all-properties)(k-induction)(incremental-bmc)" \
-  "(no-spurious-check)(all-functions)" \
+  "(all-functions)" \
   "(no-simplify)(no-fixed-point)" \
   "(graphml-witness):(json-cex):" \
   "(spurious-check):(no-all-properties)" \
