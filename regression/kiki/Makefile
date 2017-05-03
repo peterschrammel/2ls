@@ -1,12 +1,12 @@
 default: tests.log
 
-FLAGS = --verbosity 10 --inline
+FLAGS = --verbosity 10
 
 test:
-	@../test.pl -c "../../../src/summarizer/2ls $(FLAGS)"
+	@../test.pl -c "../../../src/2ls/2ls $(FLAGS)"
 
 tests.log: ../test.pl
-	@../test.pl -c "../../../src/summarizer/2ls $(FLAGS)"
+	@../test.pl -c "../../../src/2ls/2ls $(FLAGS)"
 
 show:
 	@for dir in *; do \
