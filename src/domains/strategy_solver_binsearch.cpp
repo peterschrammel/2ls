@@ -25,12 +25,13 @@ Function: strategy_solver_binsearcht::iterate
 
 \*******************************************************************/
 
-bool strategy_solver_binsearcht::iterate(invariantt &_inv)
+strategy_solver_baset::progresst strategy_solver_binsearcht::iterate(
+  invariantt &_inv)
 {
   tpolyhedra_domaint::templ_valuet &inv=
     static_cast<tpolyhedra_domaint::templ_valuet &>(_inv);
 
-  bool improved=false;
+  progresst progress=CONVERGED;
 
   solver.new_context(); // for improvement check
 
@@ -66,7 +67,7 @@ bool strategy_solver_binsearcht::iterate(invariantt &_inv)
 #endif
 
   solver << or_exprt(disjunction(strategy_cond_exprs),
-		     literal_exprt(assertion_check));
+         literal_exprt(assertion_check));
 
 #if 0
   debug() << "solve(): ";
@@ -232,10 +233,8 @@ bool strategy_solver_binsearcht::iterate(invariantt &_inv)
 
     debug() << "update value: " << from_expr(ns, "", lower) << eom;
 
-    solver.pop_context();  // symbolic value system
-
     tpolyhedra_domain.set_row_value(row, lower, inv);
-    improved=true;
+    progress=CHANGED;
   }
   else
   {
@@ -256,5 +255,5 @@ bool strategy_solver_binsearcht::iterate(invariantt &_inv)
     solver.pop_context(); // improvement check
   }
 
-  return improved;
+  return progress;
 }

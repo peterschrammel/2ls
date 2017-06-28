@@ -60,6 +60,8 @@ Author: Daniel Kroening, Peter Schrammel
 #define IGNORE_THREADS 1
 #define EXPLICIT_NONDET_LOCALS 0
 #define FILTER_ASSERTIONS 1
+#define ASSUME_AFTER_ASSERT 0
+
 
 /*******************************************************************\
 
@@ -148,11 +150,6 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
 
   if(cmdline.isset("inline"))
     options.set_option("inline", true);
-
-  if(cmdline.isset("spurious-check"))
-    options.set_option("spurious-check", cmdline.get_value("spurious-check"));
-  else
-    options.set_option("spurious-check", "all");
 
   if(cmdline.isset("slice") && cmdline.isset("inline"))
     options.set_option("slice", true);
@@ -845,7 +842,7 @@ void twols_parse_optionst::require_entry(
 
   if(goto_model.symbol_table.symbols.find(entry_point)==
      symbol_table.symbols.end())
-    throw "The program has no entry point; please complete linking";
+    throw "the program has no entry point; please complete linking";
 }
 
 /*******************************************************************\
@@ -1099,10 +1096,12 @@ bool twols_parse_optionst::process_goto_program(
       inline_main(goto_model);
     }
 
+#ifdef ASSUME_AFTER_ASSERT
     if(!cmdline.isset("independent-properties"))
     {
       add_assumptions_after_assertions(goto_model);
     }
+#endif
 
 #ifdef FILTER_ASSERTIONS
     filter_assertions(goto_model);

@@ -15,7 +15,7 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <util/std_expr.h>
 
-#include "../ssa/local_ssa.h"
+#include <ssa/local_ssa.h>
 
 typedef enum {YES, NO, UNKNOWN} threevalt;
 
@@ -38,15 +38,11 @@ class summaryt
     bw_invariant(nil_exprt()),
     termination_argument(nil_exprt()),
     terminates(UNKNOWN),
-    mark_recompute(false),
-    has_assertion(false)
-    {
-    }
+    mark_recompute(false) {}
 
   var_listt params;
   var_sett globals_in, globals_out;
   expr_sett nondets;
-
   predicatet fw_precondition; // accumulated calling contexts (over-approx)
   //  predicatet fw_postcondition; // we are not projecting that out currently
   predicatet fw_transformer; // forward summary (over-approx)
@@ -59,32 +55,39 @@ class summaryt
   predicatet termination_argument;
   threevalt terminates;
 
-  bool mark_recompute; //to force recomputation of the summary
-                       // (used for invariant reuse in k-induction)
-
-  //--------------
+  // --------------
   // the following is for generating interprocedural counterexample
 
-  bool has_assertion; 
+  bool has_assertion;
 
   std::list<local_SSAt::nodest::const_iterator> nonpassed_assertions;
 
-  struct call_sitet { //TODO: we also need unwinding information here 
-    call_sitet() 
-      : location_number(UINT_MAX) {}
-    explicit call_sitet(local_SSAt::locationt loc) 
-      : location_number(loc->location_number) {}
+  struct call_sitet
+  { // TODO: we also need unwinding information here
+    call_sitet():location_number(UINT_MAX) {}
+    explicit call_sitet(local_SSAt::locationt loc):
+      location_number(loc->location_number)
+    {
+    }
     unsigned location_number;
 
     bool operator<(const call_sitet &other) const
-      { return (location_number < other.location_number); }
+    {
+      return (location_number<other.location_number);
+    }
     bool operator==(const call_sitet &other) const
-      { return (location_number == other.location_number); }
+    {
+      return (location_number==other.location_number);
+    }
   };
 
-  const static call_sitet entry_call_site;
+  static const call_sitet entry_call_site;
   typedef std::map<call_sitet, predicatet> error_summariest;
   error_summariest error_summaries;
+  // --------------
+
+  bool mark_recompute; // to force recomputation of the summary
+                       // (used for invariant reuse in k-induction)
 
   void output(std::ostream &out, const namespacet &ns) const;
 
@@ -96,6 +99,5 @@ class summaryt
 };
 
 std::string threeval2string(threevalt v);
-
 
 #endif

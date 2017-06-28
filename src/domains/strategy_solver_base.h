@@ -32,15 +32,14 @@ class strategy_solver_baset:public messaget
     solver_calls(0)
   {}
 
-  virtual bool iterate(invariantt &inv) { assert(false); }
+  virtual progresst iterate(invariantt &inv) { assert(false); }
 
-  inline unsigned get_number_of_solver_calls() { return solver_calls; }
-  inline unsigned get_number_of_solver_instances() { return solver_instances; }
+  unsigned get_number_of_solver_calls() { return solver_calls; }
+  unsigned get_number_of_solver_instances() { return solver_instances; }
 
  protected:
   incremental_solvert &solver;
   literalt assertion_check;
-
   const namespacet &ns;
 
   // handles on values to retrieve from model

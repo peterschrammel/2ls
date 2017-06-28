@@ -11,7 +11,6 @@ Author: Peter Schrammel
 
 #include <ssa/local_ssa.h>
 
-#include "../ssa/local_ssa.h"
 #include "strategy_solver_base.h"
 #include "tpolyhedra_domain.h"
 
@@ -21,15 +20,15 @@ class strategy_solver_binsearch3t:public strategy_solver_baset
   explicit strategy_solver_binsearch3t(
     tpolyhedra_domaint &_tpolyhedra_domain,
     incremental_solvert &_solver,
-    literalt _assertion_check,
     local_SSAt& _SSA,
-    const namespacet &_ns) : 
-    strategy_solver_baset( _solver, _assertion_check, _ns),
+    literalt _assertion_check,
+    const namespacet &_ns):
+    strategy_solver_baset(_solver, _assertion_check, _ns),
     SSA(_SSA),
     tpolyhedra_domain(_tpolyhedra_domain),
     sum_bound_counter(0) {}
 
-  virtual bool iterate(invariantt &inv);
+  virtual progresst iterate(invariantt &inv);
 
  protected:
   local_SSAt &SSA;

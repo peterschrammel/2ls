@@ -338,6 +338,29 @@ Function: template_generator_baset::add_vars
 \*******************************************************************/
 
 void template_generator_baset::add_vars(
+  const std::set<exprt> &vars_to_add,
+  const domaint::guardt &pre_guard,
+  const domaint::guardt &post_guard,
+  const domaint::kindt &kind,
+  domaint::var_specst &var_specs)
+{
+  for(const auto &v : vars_to_add)
+    add_var(v, pre_guard, post_guard, kind, var_specs);
+}
+
+/*******************************************************************\
+
+Function: template_generator_baset::add_vars
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void template_generator_baset::add_vars(
   const local_SSAt::var_listt &vars_to_add,
   const domaint::guardt &pre_guard,
   const domaint::guardt &post_guard,
@@ -652,215 +675,6 @@ bool template_generator_baset::instantiate_custom_templates(
 
   return (found_poly || found_predabs);
 }
-
-/*******************************************************************\
-
-Function: template_generator_baset::build_custom_expr
-
-  Inputs:
-
- Outputs:
-
- Purpose: rename custom template to correct SSA identifiers
-
-\*******************************************************************/
-
-/*
-bool template_generator_baset::replace_post(replace_mapt replace_map, exprt &expr)
-{
-  bool replaced = false;
-  if(expr.id()==ID_function_application)
-  {
-    const function_application_exprt &f = to_function_application_expr(expr);
-    if(f.function().get(ID_identifier) == TEMPLATE_NEWVAR)
-    {
-      assert(f.arguments().size()==1);
-      if(f.arguments()[0].id()==ID_typecast) 
-        expr = replace_map[f.arguments()[0].op0()];
-      else
-        expr = replace_map[f.arguments()[0]];
-      return true;
-    }
-  }
-  for(unsigned i=0; i<expr.operands().size(); i++)
-  {
-    bool _replaced = replace_post(replace_map,expr.operands()[i]);
-    replaced = replaced || _replaced;
-  }
-  return replaced;
-}
-
-bool template_generator_baset::build_custom_expr(const local_SSAt &SSA,
-			 local_SSAt::nodest::const_iterator n_it,
-			 exprt &expr)
-{
-  replace_mapt replace_map, replace_post_map;
-
-  const ssa_domaint::phi_nodest &phi_nodes = 
-    SSA.ssa_analysis[n_it->loophead->location].phi_nodes;
-      
-  for(local_SSAt::objectst::const_iterator
-          o_it=SSA.ssa_objects.objects.begin();
-          o_it!=SSA.ssa_objects.objects.end();
-          o_it++)
-  {
-    ssa_domaint::phi_nodest::const_iterator p_it=
-      phi_nodes.find(o_it->get_identifier());
-
-    if(p_it!=phi_nodes.end()) //modified in loop
-    {
-      //rename to pre
-      replace_map[o_it->get_expr()] = 
-        SSA.name(*o_it, local_SSAt::LOOP_BACK, n_it->location);
-
-      //rename to post
-      replace_post_map[o_it->get_expr()] = 
-        SSA.read_rhs(*o_it, n_it->location);
-      //TODO: unwinding
-    }
-    else //not modified in loop
-    {
-      //rename to id valid at loop head
-      replace_map[o_it->get_expr()] = 
-        SSA.read_rhs(*o_it,n_it->loophead->location);
-      //TODO: unwinding
-    }
-  }
-
-  bool contains_newvar = replace_post(replace_post_map,expr);
-  replace_expr(replace_map,expr);
-  return contains_newvar;
-}
-*/
-
-/*******************************************************************\
-
-Function: template_generator_baset::instantiate_custom_templates
-
-  Inputs:
-
- Outputs:
-
- Purpose:
-
-\*******************************************************************/
-
-/*
-bool template_generator_baset::instantiate_custom_templates(
-                               const local_SSAt &SSA)
-{
-  // used for renaming map
-  var_listt pre_state_vars, post_state_vars;
-
-  bool found_poly = false, found_predabs = false;
-  for(local_SSAt::nodest::const_iterator n_it=SSA.nodes.begin(); 
-      n_it!=SSA.nodes.end(); n_it++)
-  {
-    if(n_it->loophead != SSA.nodes.end()) //we've found a loop
-    {
-      exprt pre_guard, post_guard, aux_expr;
-      get_pre_post_guards(SSA,n_it,pre_guard, post_guard);
-      aux_expr = true_exprt(); //TODO: change to "standard" invariant semantics
-      bool add_post_vars = false;
-
-      //search for templates in the loop
-      for(local_SSAt::nodest::const_iterator nn_it=n_it->loophead; 
-	  nn_it!=n_it; nn_it++)
-      {
-	if(nn_it->templates.empty()) continue;
-	if(nn_it->templates.size()>1000) continue; //TODO: there is an unwinder-related bug
-	for(local_SSAt::nodet::templatest::const_iterator 
-	      t_it=nn_it->templates.begin(); 
-	    t_it!=nn_it->templates.end(); t_it++)
-	{
-	  debug() << "Template expression: " 
-		  << from_expr(SSA.ns,"",*t_it) << eom;
-
-	  // check whether it is a template polyhedra or a pred abs
-	  std::set<symbol_exprt> symbols;
-	  find_symbols(*t_it, symbols);
-
-	  bool predabs = true;
-	  for(std::set<symbol_exprt>::iterator it = symbols.begin();
-	      it != symbols.end(); it++)
-	  {
-	    std::size_t found_param = 
-	      id2string(it->get_identifier()).find(TEMPLATE_PARAM_PREFIX);
-	    if (found_param != std::string::npos)
-	    {              
-	      predabs = false;
-	      break;
-	    }
-	  }
-
-	  //template polyhedra
-	  if(!predabs && t_it->id()==ID_le)
-	  {
-	    debug() << "Custom template polyhedron found" << eom;
-	    if(!found_poly) //create domain
-	    {
-	      domain_ptr = new tpolyhedra_domaint(domain_number,
-		post_renaming_map); //TODO: aux_renaming_map
-	      found_poly = true;
-	    }
-	    exprt expr = t_it->op0();
-	    bool contains_new_var = build_custom_expr(SSA,n_it,expr);
-	    if(contains_new_var) add_post_vars = true;
-	    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_template_row(
-		expr,pre_guard,
-		contains_new_var ? and_exprt(pre_guard,post_guard) : post_guard,
-		aux_expr,
-		contains_new_var ? domaint::OUT : domaint::LOOP);
-	  }
-	  // pred abs domain
-	  else if (predabs) 
-	  {
-	    options.set_option("predabs-solver",true);
-
-	    debug() << "Custom predicate template found" << eom;
-	    if(!found_predabs) //create domain
-	    {
-	      domain_ptr = new predabs_domaint(domain_number,
-		post_renaming_map); //TODO: aux_renaming_map
-	      found_predabs = true;
-	    }
-	    exprt expr = *t_it;
-	    bool contains_new_var = build_custom_expr(SSA,n_it,expr);
-	    if(contains_new_var) add_post_vars = true;
-	    static_cast<predabs_domaint *>(domain_ptr)->add_template_row(
-		expr,pre_guard,
-		contains_new_var ? and_exprt(pre_guard,post_guard) : post_guard,
-		aux_expr,
-		contains_new_var ? domaint::OUT : domaint::LOOP);
-		  
-	  }
-	  else // neither pred abs, nor polyhedra
-	    warning() << "ignoring unsupported template " 
-		      << from_expr(SSA.ns,"",*t_it) << eom;
-	}
-	if(add_post_vars) //for result retrieval via all_vars() only
-	{
-	  domaint::var_specst new_var_specs(var_specs);
-	  var_specs.clear();
-	  for(domaint::var_specst::const_iterator v = new_var_specs.begin(); 
-	      v!=new_var_specs.end(); v++)
-	  {
-	    var_specs.push_back(*v);
-	    if(v->kind==domaint::LOOP)
-	    {
-	      var_specs.push_back(*v);
-	      var_specs.back().kind = domaint::OUTL;
-              replace_expr(aux_renaming_map,var_specs.back().var);
-	    }
-	  }
-	}
-      }
-    }
-  }
-
-  return (found_poly || found_predabs);
-}
-*/
 
 /*******************************************************************\
 

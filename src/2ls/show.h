@@ -48,7 +48,6 @@ void show_assignments(
 void show_guards(
   const goto_modelt &,
   const irep_idt &function,
-  //bool simplify,
   std::ostream &,
   message_handlert &);
 

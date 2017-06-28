@@ -2,24 +2,24 @@
 
 Module: SSA Constant Propagator
 
-Author: Kumar Madhukar, Peter Schrammel
+Author: Kumar Madhukar
 
 \*******************************************************************/
 
-#ifndef CPROVER_SSA_CONST_PROPAGATOR_H
-#define CPROVER_SSA_CONST_PROPAGATOR_H
+#ifndef CPROVER_2LS_SSA_SSA_CONST_PROPAGATOR_H
+#define CPROVER_2LS_SSA_SSA_CONST_PROPAGATOR_H
 
 #include <util/message.h>
 #include <util/replace_symbol.h>
 
 #include "local_ssa.h"
 
-class ssa_const_propagatort : public messaget
+class ssa_const_propagatort:public messaget
 {
- public:
-
-  void operator()(std::list<exprt> &dest,
-		  const local_SSAt &src);
+public:
+  void operator()(
+    std::list<exprt> &dest,
+    const local_SSAt &src);
 
   struct valuest
   {
@@ -33,7 +33,7 @@ class ssa_const_propagatort : public messaget
     bool merge(const valuest &src);
 
 
-    inline void clear()
+    void clear()
     {
       replace_const.expr_map.clear();
       replace_const.type_map.clear();
@@ -53,28 +53,23 @@ class ssa_const_propagatort : public messaget
     bool maps_to_top(const exprt &expr) const;
     bool set_to_top(const exprt &expr);
     bool set_to_top(const irep_idt &id);
-   
-    bool iterate;
 
+    bool iterate;
   };
 
   valuest values;
 
- protected:
-
+protected:
   void assign(
-	      valuest &dest,
-	      const exprt &lhs,
-	      exprt rhs,
-	      const namespacet &ns) const;
+    valuest &dest,
+    const exprt &lhs,
+    exprt rhs,
+    const namespacet &ns) const;
 
   exprt evaluate_casts_in_constants(
-				    exprt expr,
-				    const typet& parent_type,
-				    bool &valid) const;
-  
-  
-  
+    exprt expr,
+    const typet& parent_type,
+    bool &valid) const;
 };
 
-#endif
+#endif // CPROVER_2LS_SSA_SSA_CONST_PROPAGATOR_H

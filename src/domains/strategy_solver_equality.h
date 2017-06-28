@@ -26,7 +26,7 @@ public:
     equality_domain.get_index_set(todo_equs);
   }
 
-  virtual bool iterate(invariantt &inv);
+  virtual progresst iterate(invariantt &inv);
 
  protected:
   equality_domaint &equality_domain;

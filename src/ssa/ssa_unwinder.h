@@ -32,6 +32,8 @@ public:
 
   void init();
 
+  void unwind_loop_at_location(unsigned loc, unsigned k);
+  unsigned unwind_loop_at_location(unsigned loc);
   void unwind(unsigned k);
 
 #if 0
@@ -42,11 +44,13 @@ public:
   }
 #endif
 
-  void compute_loop_continuation_conditions();
-
   // TODO: this should be loop specific in future,
   // maybe move to unwindable_local_ssa as it is not really unwinder related
-  void loop_continuation_conditions(exprt::operandst& loop_cont) const;
+  void compute_enable_expr();
+  void loop_continuation_conditions(exprt::operandst &loop_cont) const;
+  void loop_continuation_conditions(
+    const locationt& loop_id,
+    exprt::operandst &loop_cont) const;
 
 #if 0
   // TODO: these two should be possible with unwindable_local_ssa facilities
@@ -57,7 +61,9 @@ public:
 
   // TODO: this must go away, should use SSA.rename instead
   void unwinder_rename(
-    symbol_exprt &var, const local_SSAt::nodet &node, bool pre) const;
+    symbol_exprt &var,
+    const local_SSAt::nodet &node,
+    bool pre) const;
 
   class loopt // loop tree
   {
@@ -76,6 +82,9 @@ public:
     bool is_dowhile;
     bool is_root;
     long current_unwinding;
+
+    // to have an enabling_expr and current_unwindings (odometert)
+    exprt::operandst loop_enabling_exprs;
 
     exprt::operandst current_continuation_conditions;
 
@@ -111,10 +120,16 @@ protected:
   void build_pre_post_map();
   void build_exit_conditions();
 
-  void unwind(loopt &loop, unsigned k, bool is_new_parent);
+  void unwind(
+    loopt &loop,
+    unsigned k,
+    bool is_new_parent,
+    bool propagate=false,
+    unsigned prop_unwind=0,
+    unsigned prop_loc=0,
+    bool propagate_all=false);
 
   exprt get_continuation_condition(const loopt& loop) const;
-  void compute_loop_continuation_conditions(loopt& loop);
   void loop_continuation_conditions(
     const loopt& loop, exprt::operandst &loop_cont) const;
 
@@ -143,15 +158,17 @@ public:
   void init(bool is_kinduction, bool is_bmc);
   void init_localunwinders();
 
+  void unwind_loop_alone(const irep_idt fname, unsigned loc, unsigned k);
+  unsigned unwind_loop_once_more(const irep_idt fname, unsigned loc);
   void unwind(const irep_idt fname, unsigned k);
   void unwind_all(unsigned k);
 
-  inline ssa_local_unwindert &get(const irep_idt& fname)
+  ssa_local_unwindert &get(const irep_idt& fname)
   {
     return unwinder_map.at(fname);
   }
 
-  inline const ssa_local_unwindert &get(const irep_idt& fname) const
+  const ssa_local_unwindert &get(const irep_idt& fname) const
   {
     return unwinder_map.at(fname);
   }
@@ -162,4 +179,4 @@ protected:
   unwinder_mapt unwinder_map;
 };
 
-#endif
+#endif // CPROVER_2LS_SSA_SSA_UNWINDER_H

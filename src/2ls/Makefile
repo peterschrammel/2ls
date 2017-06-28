@@ -10,10 +10,7 @@ SRC = 2ls_main.cpp 2ls_parse_options.cpp \
       cover_goals_ext.cpp horn_encoding.cpp \
       preprocessing_util.cpp \
       instrument_goto.cpp dynamic_cfg.cpp \
-      summarizer_bw_cex_ai.cpp   summarizer_bw_cex_complete.cpp  summarizer_bw_cex.cpp \
-      summarizer_bw_cex_all.cpp  summarizer_bw_cex_concrete.cpp  summarizer_bw_cex_wp.cpp \
-      graphml_witness_ext.cpp \
-
+      graphml_witness_ext.cpp
 
 OBJ+= $(CBMC)/src/ansi-c/ansi-c$(LIBEXT) \
       $(CBMC)/src/linking/linking$(LIBEXT) \
@@ -32,6 +29,7 @@ OBJ+= $(CBMC)/src/ansi-c/ansi-c$(LIBEXT) \
       ../domains/domains$(LIBEXT) \
       ../ssa/ssa$(LIBEXT) \
       ../solver/solver$(LIBEXT) \
+      # empty last line
 
 CP_CXXFLAGS+= $(TWOLSFLAGS)
 

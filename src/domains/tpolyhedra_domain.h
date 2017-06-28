@@ -43,16 +43,15 @@ public:
     unsigned _domain_number,
     replace_mapt &_renaming_map,
     const namespacet &_ns):
-    domaint(_domain_number, _renaming_map, _ns),
-    current_refinement(0)
+    domaint(_domain_number, _renaming_map, _ns)
   {
   }
 
   // initialize value
   virtual void initialize(valuet &value);
 
-  virtual void reset_refinements() { current_refinement = 0; }
-  virtual bool refine(); //non-monotone condition refinement
+  virtual void reset_refinements() { current_refinement=0; }
+  virtual bool refine(); // non-monotone condition refinement
   std::vector<exprt> &refinement_expressions() { return refinement_exprs; }
 
   virtual void join(valuet &value1, const valuet &value2);
@@ -78,7 +77,8 @@ public:
   exprt to_symb_post_constraints(const std::set<rowt> &symb_rows);
   exprt get_row_symb_value_constraint(
     const rowt &row,
-    const row_valuet &row_value, bool geq=false);
+    const row_valuet &row_value,
+    bool geq=false);
   exprt get_row_symb_pre_constraint(
     const rowt &row,
     const row_valuet &row_value);
@@ -142,7 +142,7 @@ protected:
 
   templatet templ;
 
-  //non-monotone condition refinement
+  // non-monotone condition refinement
   std::vector<exprt> refinement_exprs;
   unsigned current_refinement, max_refinements;
   exprt current_refinement_expr;

@@ -13,7 +13,8 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <goto-programs/goto_functions.h>
 
-#include "../domains/incremental_solver.h"
+#include <domains/incremental_solver.h>
+
 #include "ssa_domain.h"
 #include "guard_map.h"
 #include "ssa_object.h"
@@ -57,17 +58,14 @@ public:
   public:
     inline nodet(
       locationt _location,
-      std::list<nodet>::iterator _loophead)
-      :
+      std::list<nodet>::iterator _loophead):
+        function_calls_inlined(false),
         enabling_expr(true_exprt()),
-  	marked(false), function_calls_inlined(false),
+        marked(false),
         location(_location),
         loophead(_loophead)
       {
       }
-
-    exprt enabling_expr; // for incremental unwinding
-    bool marked; // for incremental unwinding
 
     typedef std::vector<equal_exprt> equalitiest;
     equalitiest equalities;
@@ -77,7 +75,6 @@ public:
 
     typedef std::vector<exprt> assertionst;
     assertionst assertions;
-    exprt::operandst assertions_after_loop; //for k-induction assertion hoisting
 
     typedef std::vector<exprt> assumptionst;
     assertionst assumptions;
@@ -86,6 +83,8 @@ public:
     function_callst function_calls;
     bool function_calls_inlined;
 
+    exprt enabling_expr; // for incremental unwinding
+    bool marked; // for incremental unwinding
 
     // custom invariant templates
     typedef std::vector<exprt> templatest;
@@ -113,17 +112,17 @@ public:
 
   void mark_nodes()
   {
-    for(nodest::iterator n_it=nodes.begin();
-  n_it!=nodes.end(); n_it++) n_it->marked=true;
+    for(auto &n : nodes)
+      n.marked=true;
   }
   void unmark_nodes()
   {
-      for(nodest::iterator n_it=nodes.begin();
-          n_it!=nodes.end(); n_it++) n_it->marked=false;
+    for(auto &n : nodes)
+      n.marked=false;
   }
 
   // for incremental unwinding
-  std::list<symbol_exprt> enabling_exprs;
+  std::vector<exprt> enabling_exprs;
   exprt get_enabling_exprs() const;
 
   // function entry and exit variables
@@ -205,7 +204,6 @@ public:
     assert(it!=location_map.end());
     return it->second;
   }
-
   locationt find_location_by_number(unsigned location_number) const;
 
 protected:
@@ -222,12 +220,14 @@ protected:
   void build_function_call(locationt loc);
   void build_assertions(locationt loc);
   void build_assumptions(locationt loc);
-  void assertions_after_loop();
 
   // custom templates
   void collect_custom_templates();
   replace_mapt template_newvars;
   exprt template_last_newvar;
+
+  void get_nondet_vars(const exprt &expr);
+  void get_nondet_vars();
 };
 
 std::vector<exprt> & operator <<

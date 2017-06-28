@@ -1,6 +1,5 @@
 /*******************************************************************\
 
-
 Module: Cover a set of goals incrementally
 
 Author: Daniel Kroening, kroening@kroening.com
@@ -175,71 +174,76 @@ Function: cover_goals_extt::assignment
 
 void cover_goals_extt::assignment()
 {
-  // check loop head choices in model
-  bool invariants_involved=false;
-  if(spurious_check)
+  std::list<cover_goals_extt::cover_goalt>::const_iterator g_it=goals.begin();
+  for(goal_mapt::const_iterator it=goal_map.begin();
+      it!=goal_map.end(); it++, g_it++)
   {
-    for(exprt::operandst::const_iterator l_it=loophead_selects.begin();
-        l_it!=loophead_selects.end(); l_it++)
+    if(property_map[it->first].result==property_checkert::UNKNOWN &&
+       solver.l_get(g_it->condition).is_true())
     {
-      if(solver.get(l_it->op0()).is_true())
-      {
-        invariants_involved=true;
-        break;
-      }
-    }
-  }
-  if(!invariants_involved || !spurious_check)
-  {
-    std::list<cover_goals_extt::cover_goalt>::const_iterator g_it=goals.begin();
-    for(goal_mapt::const_iterator it=goal_map.begin();
-        it!=goal_map.end(); it++, g_it++)
-    {
-      if(property_map[it->first].result==property_checkert::UNKNOWN &&
-         solver.l_get(g_it->condition).is_true())
-	{
-	  if(spurious_check)
-	    {
-	      assert((g_it->cond_expression).id() == ID_not);
-	      exprt conjunct_expr = (g_it->cond_expression).op0();
+#if 1
+      // otherwise this would interfere with necessary preconditions
+      solver.pop_context();
 
-	      if(conjunct_expr.id() != ID_and)
-  {
-		solver.pop_context(); //otherwise this would interfere with necessary preconditions
-		summarizer_bw_cex.summarize(g_it->cond_expression);
-		property_map[it->first].result = summarizer_bw_cex.check();
-		solver.new_context();
-	      }
-	      else
-  {
-		exprt::operandst failed_exprs;
-		for(exprt::operandst::const_iterator c_it = 
-		      conjunct_expr.operands().begin();
-		    c_it != conjunct_expr.operands().end(); c_it++)
-                {
-		  literalt conjunct_literal = solver.convert(*c_it);
-		  if(solver.l_get(conjunct_literal).is_false())
-		    failed_exprs.push_back(*c_it);
-		}
-		solver.pop_context(); //otherwise this would interfere with necessary preconditions
-		for(unsigned i=0; i<failed_exprs.size(); ++i)
-		{
-		  summarizer_bw_cex.summarize(
-		    not_exprt(failed_exprs[i]));
-		  property_map[it->first].result = summarizer_bw_cex.check();
-		  if(property_map[it->first].result == 
-		     property_checkert::FAIL)
-		    break;
+      summarizer_bw_cex.summarize(g_it->cond_expression);
+      property_map[it->first].result=summarizer_bw_cex.check();
+      solver.new_context();
+#else // THE ASSERTIONS THAT FAIL COULD BE RATHER ARBITRARY SINCE THE FORMULA
+      //    IS NOT "ROOTED" IN AN INITIAL STATE.
+      assert((g_it->cond_expression).id()==ID_not);
+      exprt conjunct_expr=(g_it->cond_expression).op0();
+#if 0
+      std::cout << "FAILED EXPR: "
+                << from_expr(SSA.ns, "", conjunct_expr) << std::endl;
+#endif
+
+      if(conjunct_expr.id()!=ID_and)
+      {
+        // otherwise this would interfere with necessary preconditions
+        solver.pop_context();
+        summarizer_bw_cex.summarize(g_it->cond_expression);
+        property_map[it->first].result=summarizer_bw_cex.check();
+        solver.new_context();
       }
-		solver.new_context();
+      else
+      {
+        // filter out assertion instances that are not violated
+        exprt::operandst failed_exprs;
+        for(exprt::operandst::const_iterator c_it=
+              conjunct_expr.operands().begin();
+            c_it!=conjunct_expr.operands().end(); c_it++)
+        {
+          literalt conjunct_literal=solver.convert(*c_it);
+          if(solver.l_get(conjunct_literal).is_false())
+          {
+            failed_exprs.push_back(*c_it);
+#if 0
+            std::cout << "failed_expr: "
+                      << from_expr(SSA.ns, "", *c_it) << std::endl;
+#endif
+          }
+        }
+        // otherwise this would interfere with necessary preconditions
+        solver.pop_context();
+
+        summarizer_bw_cex.summarize(not_exprt(conjunction(failed_exprs)));
+        property_map[it->first].result=summarizer_bw_cex.check();
+        solver.new_context();
+      }
+#endif
     }
-  }
-	  else
-	    property_map[it->first].result = property_checkert::FAIL;
-	}
-  }
+    if(property_map[it->first].result==property_checkert::FAIL)
+    {
+      if(build_error_trace)
+      {
+        ssa_build_goto_tracet build_goto_trace(SSA, solver.get_solver());
+        build_goto_trace(property_map[it->first].error_trace);
+      }
+    }
+    if(!all_properties &&
+       property_map[it->first].result==property_checkert::FAIL)
+      break;
+    }
 
   _iterations++; // statistics
-  }
 }
-

@@ -25,7 +25,7 @@ public:
   {
   }
 
-  virtual bool iterate(invariantt &inv);
+  virtual progresst iterate(invariantt &inv);
 
 protected:
   tpolyhedra_domaint &tpolyhedra_domain;
