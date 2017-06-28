@@ -279,10 +279,17 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   }
 
   // check for spuriousness of assertion failures
+  /*
   if(cmdline.isset("no-spurious-check"))
     options.set_option("spurious-check", false);
   else
     options.set_option("spurious-check", true);
+  */
+
+  if(cmdline.isset("spurious-check"))
+    options.set_option("spurious-check", cmdline.get_value("spurious-check"));
+  else
+    options.set_option("spurious-check", "all");
 
   // all properties (default)
   if(cmdline.isset("stop-on-fail"))
