@@ -32,12 +32,13 @@ Function: strategy_solver_binsearch2t::iterate
 
 \*******************************************************************/
 
-bool strategy_solver_binsearch2t::iterate(invariantt &_inv)
+strategy_solver_binsearch2t::progresst
+strategy_solver_binsearch2t::iterate(invariantt &_inv)
 {
   tpolyhedra_domaint::templ_valuet &inv=
     static_cast<tpolyhedra_domaint::templ_valuet &>(_inv);
 
-  bool improved=false;
+  progresst progress=CONVERGED;
 
   solver.new_context(); // for improvement check
 
@@ -87,7 +88,7 @@ bool strategy_solver_binsearch2t::iterate(invariantt &_inv)
 #if 0
     debug() << "SAT" << eom;
 #endif
-    improved=true;
+    progress=CHANGED;
 
     std::size_t row=0;
     for(; row<strategy_cond_literals.size(); ++row)
@@ -112,12 +113,12 @@ bool strategy_solver_binsearch2t::iterate(invariantt &_inv)
   }
   solver.pop_context(); // improvement check
 
-  if(!improved) // done
+  if(progress!=CHANGED) // done
   {
 #if 0
     debug() << "UNSAT" << eom;
 #endif
-    return improved;
+    return progress;
   }
 
   // symbolic value system
@@ -154,7 +155,7 @@ bool strategy_solver_binsearch2t::iterate(invariantt &_inv)
   // do not solve system if we have just reached a new loop
   //   (the system will be very large!)
   if(improved_from_neginf)
-    return improved;
+    return progress;
 
   solver.new_context(); // symbolic value system
   solver << pre_inv_expr;
@@ -163,7 +164,6 @@ bool strategy_solver_binsearch2t::iterate(invariantt &_inv)
   extend_expr_types(_upper);
   extend_expr_types(_lower);
   tpolyhedra_domaint::row_valuet upper=simplify_const(_upper);
-  // from_integer(mp_integer(512), _upper.type());
   tpolyhedra_domaint::row_valuet lower=simplify_const(_lower);
   assert(sum.type()==upper.type());
   assert(sum.type()==lower.type());
@@ -241,5 +241,5 @@ bool strategy_solver_binsearch2t::iterate(invariantt &_inv)
   solver.pop_context();  // symbolic value system
 
 
-  return improved;
+  return progress;
 }
