@@ -14,8 +14,6 @@ Author: Daniel Kroening, Peter Schrammel
 
 #include "ssa_build_goto_trace.h"
 
-#define TERM_CEX 1
-
 /*******************************************************************\
 
 Function: ssa_build_goto_tracet::finalize_lhs
@@ -79,8 +77,7 @@ bool ssa_build_goto_tracet::can_convert_ssa_expr(const exprt &expr)
   if(expr.id()==ID_member)
   {
     const member_exprt &member=to_member_expr(expr);
-    can_convert_ssa_expr(member.struct_op());
-    return true;
+    return can_convert_ssa_expr(member.struct_op());
   }
   else if(expr.id()==ID_index)
   {
@@ -218,8 +215,9 @@ bool ssa_build_goto_tracet::record_step(
 #if 0
     std::cout << "ASSIGN "
               << from_expr(unwindable_local_SSA.ns, "", code_assign)
-              << ": " << from_expr(unwindable_local_SSA.ns, "", rhs_ssa)
-              << "==" << from_expr(unwindable_local_SSA.ns, "", rhs_simplified)
+              << ": " << from_expr(unwindable_local_SSA.ns, "", lhs_simplified)
+              << " := "
+              << from_expr(unwindable_local_SSA.ns, "", rhs_simplified)
               << std::endl;
 #endif
     step.type=goto_trace_stept::ASSIGNMENT;
@@ -309,9 +307,6 @@ void ssa_build_goto_tracet::operator()(
   unwindable_local_SSA.current_unwindings.clear();
   unsigned last_level=0;
   unsigned step_nr=1;
-#if TERM_CEX
-  bool stop_next=false;
-#endif
 
   while(current_pc!=unwindable_local_SSA.goto_function.body.instructions.end())
   {
@@ -336,7 +331,8 @@ void ssa_build_goto_tracet::operator()(
       std::cout << "loop-head : " << current_pc->location_number << std::endl;
       std::cout << "unwindings: "
                 << unwindable_local_SSA.odometer_to_string(
-                  unwindable_local_SSA.current_unwindings, 100)
+                  unwindable_local_SSA.current_unwindings,
+                  100)
                 << std::endl;
 #endif
     }
@@ -357,25 +353,20 @@ void ssa_build_goto_tracet::operator()(
     // get successor
     if(current_pc->is_goto() && taken)
     {
-#if TERM_CEX
-      if(termination && stop_next)
-      {
-        break;
-      }
-#endif
       if(current_pc->is_backwards_goto())
       {
+        if(unwindable_local_SSA.current_unwindings.back()==0)
+          break;
+
         // we de-(!)-crement the unwinding counter
         unwindable_local_SSA.decrement_unwindings(0);
 #if 0
         std::cout << "loop-end  : " << current_pc->location_number << std::endl;
         std::cout << "unwindings: "
                   << unwindable_local_SSA.odometer_to_string(
-                    unwindable_local_SSA.current_unwindings, 100)
+                    unwindable_local_SSA.current_unwindings,
+                    100)
                   << std::endl;
-#endif
-#if TERM_CEX
-        stop_next=true;
 #endif
       }
       current_pc=current_pc->get_target();

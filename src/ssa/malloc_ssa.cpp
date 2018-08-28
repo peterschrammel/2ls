@@ -15,6 +15,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include <util/pointer_offset_size.h>
 
 #include <ansi-c/c_types.h>
+#include <analyses/constant_propagator.h>
 
 #include "malloc_ssa.h"
 
@@ -163,6 +164,8 @@ exprt malloc_ssa(
   if(result.type()!=code.type())
     result=typecast_exprt(result, code.type());
 
+  result.set("#malloc_result", true);
+
   return result;
 }
 
@@ -179,12 +182,12 @@ Function: replace_malloc_rec
 
 \*******************************************************************/
 
-static void replace_malloc_rec(
+static bool replace_malloc_rec(
   exprt &expr,
   const std::string &suffix,
   symbol_tablet &symbol_table,
   const exprt &malloc_size,
-  unsigned &counter)
+  unsigned loc_number)
 {
   if(expr.id()==ID_side_effect &&
      to_side_effect_expr(expr).get_statement()==ID_malloc)
@@ -192,12 +195,22 @@ static void replace_malloc_rec(
     assert(!malloc_size.is_nil());
     expr.op0()=malloc_size;
 
-    expr=malloc_ssa(to_side_effect_expr(expr),
-      "$"+i2string(counter++)+suffix, symbol_table);
+    expr=malloc_ssa(
+      to_side_effect_expr(expr),
+      "$"+i2string(loc_number)+suffix,
+      symbol_table);
+    return true;
   }
   else
+  {
+    bool result=false;
     Forall_operands(it, expr)
-      replace_malloc_rec(*it, suffix, symbol_table, malloc_size, counter);
+    {
+      if(replace_malloc_rec(*it, suffix, symbol_table, malloc_size, loc_number))
+        result=true;
+    }
+    return result;
+  }
 }
 
 /*******************************************************************\
@@ -212,16 +225,33 @@ Function: replace_malloc
 
 \*******************************************************************/
 
-void replace_malloc(
+bool replace_malloc(
   goto_modelt &goto_model,
   const std::string &suffix)
 {
-  unsigned counter=0;
+  bool result=false;
   Forall_goto_functions(f_it, goto_model.goto_functions)
   {
+    goto_programt::const_targett loop_end=f_it->second.body.instructions.end();
     exprt malloc_size=nil_exprt();
     Forall_goto_program_instructions(i_it, f_it->second.body)
     {
+      if(loop_end==f_it->second.body.instructions.end())
+      {
+        for(const auto &incoming : i_it->incoming_edges)
+        {
+          if(incoming->is_backwards_goto() &&
+             incoming!=i_it)
+          {
+            loop_end=incoming;
+          }
+        }
+      }
+      else if(i_it==loop_end)
+      {
+        loop_end=f_it->second.body.instructions.end();
+      }
+
       if(i_it->is_assign())
       {
         code_assignt &code_assign=to_code_assign(i_it->code);
@@ -235,12 +265,31 @@ void replace_malloc(
             id2string(to_symbol_expr(code_assign.lhs()).get_identifier());
           if(lhs_id=="malloc::malloc_size" ||
              lhs_id=="__builtin_alloca::alloca_size")
-            malloc_size=code_assign.rhs();
+          {
+            namespacet ns(goto_model.symbol_table);
+            goto_functionst::goto_functiont function_copy=f_it->second;
+            constant_propagator_ait const_propagator(function_copy, ns);
+            forall_goto_program_instructions(copy_i_it, function_copy.body)
+            {
+              if(copy_i_it->location_number==i_it->location_number)
+              {
+                assert(copy_i_it->is_assign());
+                malloc_size=to_code_assign(copy_i_it->code).rhs();
+              }
+            }
+          }
         }
-        replace_malloc_rec(code_assign.rhs(), suffix,
-          goto_model.symbol_table, malloc_size, counter);
+        if(replace_malloc_rec(
+          code_assign.rhs(),
+          suffix,
+          goto_model.symbol_table,
+          malloc_size,
+          i_it->location_number))
+        {
+          result=(loop_end!=f_it->second.body.instructions.end());
+        }
       }
     }
   }
+  return result;
 }
-

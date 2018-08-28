@@ -33,7 +33,7 @@ void dynamic_cfgt::operator()(
   build_cfg(goto_program, ssa_unwinder);
 
   assumptionst assumptions;
-  build_from_invariants(ssa, summary, assumptions);
+  build_from_invariants(ssa, summary.fw_invariant, assumptions);
   add_assumptions(assumptions);
 }
 
@@ -193,6 +193,23 @@ void dynamic_cfgt::build_cfg(
       nodes[node].id.iteration_stack=iteration_stack;
       nodes[node].is_loop_head=true;
     }
+    else
+    {
+      // alternative loop head detection when unwinder was not used
+      for(const auto &incoming : it->incoming_edges)
+      {
+        if(incoming->is_backwards_goto() &&
+           incoming!=it)
+        {
+          iteration_stack.push_back(0);
+          loop_node_stack.push_back(node);
+          max_iteration_stack.push_back(0);
+          nodes[node].id.iteration_stack=iteration_stack;
+          nodes[node].is_loop_head=true;
+          break;
+        }
+      }
+    }
 
     const std::set<node_indext> &iedges=incoming_edges[it];
     for(const auto &from : iedges)
@@ -273,29 +290,20 @@ Function: dynamic_cfgt::build_from_invariants
 
 void dynamic_cfgt::build_from_invariants(
   const unwindable_local_SSAt &ssa,
-  const summaryt &summary,
+  const exprt &invariants,
   assumptionst &assumptions)
 {
-  if(summary.fw_invariant.is_nil() ||
-     summary.fw_invariant.is_true())
+  if(invariants.is_nil() || invariants.is_true())
     return;
 
   // expected format /\_i g_i=> inv_i
-  if(summary.fw_invariant.id()==ID_implies)
+  if(invariants.id()==ID_implies)
   {
-    build_from_invariant(
-      ssa, summary.fw_invariant,
-      assumptions);
+    build_from_invariant(ssa, invariants, assumptions);
   }
-  else if(summary.fw_invariant.id()==ID_and)
+  else if(invariants.id()==ID_and)
   {
-    for(unsigned i=0; i<summary.fw_invariant.operands().size(); i++)
-    {
-      assert(summary.fw_invariant.operands()[i].id()==ID_implies);
-      build_from_invariant(
-        ssa, summary.fw_invariant.operands()[i],
-        assumptions);
-    }
+    forall_operands(it, invariants)
+      build_from_invariants(ssa, *it, assumptions);
   }
 }
-

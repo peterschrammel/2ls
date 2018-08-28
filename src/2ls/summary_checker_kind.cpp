@@ -6,9 +6,8 @@ Author: Peter Schrammel
 
 \*******************************************************************/
 
+#include <domains/heap_interval_domain.h>
 #include "summary_checker_kind.h"
-
-#define GIVE_UP_INVARIANTS 4
 
 /*******************************************************************\
 
@@ -27,12 +26,14 @@ property_checkert::resultt summary_checker_kindt::operator()(
 {
   const namespacet ns(goto_model.symbol_table);
 
-  SSA_functions(goto_model, ns);
+  SSA_functions(goto_model, ns, heap_analysis);
 
   ssa_unwinder.init(true, false);
 
   property_checkert::resultt result=property_checkert::UNKNOWN;
   unsigned max_unwind=options.get_unsigned_int_option("unwind");
+  unsigned give_up_invariants=
+    options.get_unsigned_int_option("give-up-invariants");
   status() << "Max-unwind is " << max_unwind << eom;
   ssa_unwinder.init_localunwinders();
 
@@ -47,7 +48,7 @@ property_checkert::resultt summary_checker_kindt::operator()(
 
     result=check_properties();
     bool magic_limit_not_reached=
-      unwind<GIVE_UP_INVARIANTS || // magic constant
+      unwind<give_up_invariants ||
       !options.get_bool_option("competition-mode");
     if(result==property_checkert::UNKNOWN &&
        !options.get_bool_option("havoc") &&

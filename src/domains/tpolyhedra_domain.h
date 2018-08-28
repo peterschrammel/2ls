@@ -49,6 +49,9 @@ public:
 
   // initialize value
   virtual void initialize(valuet &value);
+  virtual void initialize_in_templates(valuet &value,
+    std::map<exprt,constant_exprt> context_bounds=
+    std::map<exprt,constant_exprt>());
 
   virtual void join(valuet &value1, const valuet &value2);
 
@@ -73,7 +76,8 @@ public:
   exprt to_symb_post_constraints(const std::set<rowt> &symb_rows);
   exprt get_row_symb_value_constraint(
     const rowt &row,
-    const row_valuet &row_value, bool geq=false);
+    const row_valuet &row_value,
+    bool geq=false);
   exprt get_row_symb_pre_constraint(
     const rowt &row,
     const row_valuet &row_value);
@@ -97,13 +101,18 @@ public:
 
   // printing
   virtual void output_value(
-    std::ostream &out, const valuet &value, const namespacet &ns) const;
+    std::ostream &out,
+    const valuet &value,
+    const namespacet &ns) const;
   virtual void output_domain(
-    std::ostream &out, const namespacet &ns) const;
+    std::ostream &out,
+    const namespacet &ns) const;
 
   // projection
   virtual void project_on_vars(
-    valuet &value, const var_sett &vars, exprt &result);
+    valuet &value,
+    const var_sett &vars,
+    exprt &result);
 
   unsigned template_size();
 
@@ -116,13 +125,17 @@ public:
     kindt kind);
 
   void add_interval_template(
-    const var_specst &var_specs, const namespacet &ns);
+    const var_specst &var_specs,
+    const namespacet &ns, bool rec_cntx_sensitive=false);
   void add_difference_template(
-    const var_specst &var_specs, const namespacet &ns);
+    const var_specst &var_specs,
+    const namespacet &ns);
   void add_sum_template(
-    const var_specst &var_specs, const namespacet &ns);
+    const var_specst &var_specs,
+    const namespacet &ns);
   void add_quadratic_template(
-    const var_specst &var_specs, const namespacet &ns);
+    const var_specst &var_specs,
+    const namespacet &ns);
 
   symbol_exprt get_row_symb_value(const rowt &row);
 

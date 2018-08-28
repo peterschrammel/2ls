@@ -31,12 +31,17 @@ Author: Peter Schrammel
 #include "template_generator_ranking.h"
 #include "strategy_solver_predabs.h"
 #include "ssa_analyzer.h"
+#include "strategy_solver_heap.h"
+#include "strategy_solver_heap_interval.h"
 
+// NOLINTNEXTLINE(*)
 #define BINSEARCH_SOLVER strategy_solver_binsearcht(\
   *static_cast<tpolyhedra_domaint *>(domain), solver, SSA.ns)
 #if 0
+// NOLINTNEXTLINE(*)
 #define BINSEARCH_SOLVER strategy_solver_binsearch2t(\
   *static_cast<tpolyhedra_domaint *>(domain), solver, SSA.ns)
+// NOLINTNEXTLINE(*)
 #define BINSEARCH_SOLVER strategy_solver_binsearch3t(\
   *static_cast<tpolyhedra_domaint *>(domain), solver, SSA, SSA.ns)
 #endif
@@ -57,7 +62,10 @@ void ssa_analyzert::operator()(
   incremental_solvert &solver,
   local_SSAt &SSA,
   const exprt &precondition,
-  template_generator_baset &template_generator)
+  template_generator_baset &template_generator,
+  bool recursive,
+  std::map<exprt,constant_exprt> context_bounds,
+  tmpl_rename_mapt templ_maps)
 {
   if(SSA.goto_function.body.instructions.empty())
     return;
@@ -68,8 +76,11 @@ void ssa_analyzert::operator()(
   solver.new_context();
   solver << SSA.get_enabling_exprs();
 
+  if(!template_generator.options.get_bool_option("has-recursion") ||
+    !recursive ||
+    !template_generator.options.get_bool_option("context-sensitive"))
   // add precondition (or conjunction of asssertion in backward analysis)
-  solver << precondition;
+    solver << precondition;
 
   domain=template_generator.domain();
 
@@ -103,6 +114,28 @@ void ssa_analyzert::operator()(
       *static_cast<equality_domaint *>(domain), solver, SSA.ns);
     result=new equality_domaint::equ_valuet();
   }
+  else if(template_generator.options.get_bool_option("heap"))
+  {
+    strategy_solver=new strategy_solver_heapt(
+      *static_cast<heap_domaint *>(domain),
+      solver,
+      SSA,
+      precondition,
+      get_message_handler(),
+      template_generator);
+    result=new heap_domaint::heap_valuet();
+  }
+  else if(template_generator.options.get_bool_option("heap-interval"))
+  {
+    strategy_solver=new strategy_solver_heap_intervalt(
+      *static_cast<heap_interval_domaint *>(domain),
+      solver,
+      SSA,
+      precondition,
+      get_message_handler(),
+      template_generator);
+    result=new heap_interval_domaint::heap_interval_valuet();
+  }
   else
   {
     if(template_generator.options.get_bool_option("enum-solver"))
@@ -130,9 +163,20 @@ void ssa_analyzert::operator()(
 
   // initialize inv
   domain->initialize(*result);
+  if(recursive && // initialize input arguments and input global variables with calling context
+   template_generator.options.get_bool_option("context-sensitive"))
+    domain->initialize_in_templates(*result, context_bounds);
 
   // iterate
-  while(strategy_solver->iterate(*result)) {}
+  if(recursive)//iterate for recursive function
+  {
+    assert(template_generator.options.get_bool_option("binsearch-solver"));
+    //while(strategy_solver->iterate_for_recursive(*result,templ_maps,
+     //template_generator.options.get_bool_option("context-sensitive"))) {}
+    while(strategy_solver->iterate(*result)) {}//need to change
+  }
+  else//iterate for non-recursive function
+    while(strategy_solver->iterate(*result)) {}
 
   solver.pop_context();
 
@@ -159,4 +203,39 @@ Function: ssa_analyzert::get_result
 void ssa_analyzert::get_result(exprt &_result, const domaint::var_sett &vars)
 {
   domain->project_on_vars(*result, vars, _result);
+}
+
+/*******************************************************************\
+
+Function: ssa_analyzert::update_heap_out
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+void ssa_analyzert::update_heap_out(summaryt::var_sett &out)
+{
+  heap_domaint &heap_domain=static_cast<heap_domaint &>(*domain);
+
+  auto new_heap_vars=heap_domain.get_new_heap_vars();
+  out.insert(new_heap_vars.begin(), new_heap_vars.end());
+}
+
+/*******************************************************************\
+
+Function: ssa_analyzert::input_heap_bindings
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+const exprt ssa_analyzert::input_heap_bindings()
+{
+  return static_cast<heap_domaint &>(*domain).get_iterator_bindings();
 }

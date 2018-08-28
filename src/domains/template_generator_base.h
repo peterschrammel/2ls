@@ -73,6 +73,8 @@ protected:
 
   void filter_template_domain();
   void filter_equality_domain();
+  void filter_heap_domain();
+  void filter_heap_interval_domain();
 
   void add_var(
     const domaint::vart &var_to_add,
@@ -102,7 +104,8 @@ protected:
   void get_pre_post_guards(
     const local_SSAt &SSA,
     local_SSAt::nodest::const_iterator n_it,
-    exprt &pre_guard, exprt &post_guard);
+    exprt &pre_guard,
+    exprt &post_guard);
   void get_pre_var(
     const local_SSAt &SSA,
     local_SSAt::objectst::const_iterator o_it,
@@ -122,7 +125,7 @@ protected:
     exprt &expr);
 
   virtual void handle_special_functions(const local_SSAt &SSA);
-  void instantiate_standard_domains(const local_SSAt &SSA);
+  void instantiate_standard_domains(const local_SSAt &SSA, bool recursive=false);
   bool instantiate_custom_templates(const local_SSAt &SSA);
 
   void rename_aux_post(symbol_exprt &expr)

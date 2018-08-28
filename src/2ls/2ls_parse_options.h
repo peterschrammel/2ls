@@ -31,21 +31,22 @@ class optionst;
   "(non-incremental)" \
   "(no-assertions)(no-assumptions)" \
   "(16)(32)(64)(LP64)(ILP64)(LLP64)(ILP32)(LP32)" \
+  "(object-bits):" \
   "(little-endian)(big-endian)" \
   "(error-label):(verbosity):(no-library)" \
   "(version)" \
   "(i386-linux)(i386-macos)(i386-win32)(win32)(winx64)(gcc)" \
   "(ppc-macos)(unsigned-char)" \
-  "(havoc)(intervals)(zones)(octagons)(equalities)"\
+  "(havoc)(intervals)(zones)(octagons)(equalities)(heap)(heap-interval)"\
   "(enum-solver)(binsearch-solver)(arrays)"\
   "(string-abstraction)(no-arch)(arch):(floatbv)(fixedbv)" \
   "(round-to-nearest)(round-to-plus-inf)(round-to-minus-inf)(round-to-zero)" \
   "(inline)(inline-main)(inline-partial):" \
-  "(context-sensitive)(termination)" \
+  "(context-sensitive)(termination)(nontermination)" \
   "(lexicographic-ranking-function):(monolithic-ranking-function)" \
   "(max-inner-ranking-iterations):" \
   "(preconditions)(sufficient)" \
-  "(show-locs)(show-vcc)(show-properties)(show-trace)(show-stats)" \
+  "(show-locs)(show-vcc)(show-properties)(trace)(show-stats)" \
   "(show-goto-functions)(show-guards)(show-defs)(show-ssa)(show-assignments)" \
   "(show-invariants)(std-invariants)" \
   "(property):(all-properties)(k-induction)(incremental-bmc)" \
@@ -54,7 +55,7 @@ class optionst;
   "(graphml-witness):(json-cex):" \
   "(no-spurious-check)(stop-on-fail)" \
   "(competition-mode)(slice)(no-propagation)(independent-properties)" \
-  "(no-unwinding-assertions)"
+  "(no-unwinding-assertions)(has-recursion)"//////////////////////////
   // the last line is for CBMC-regression testing only
 
 class twols_parse_optionst:
@@ -75,6 +76,7 @@ protected:
   ui_message_handlert ui_message_handler;
   bool recursion_detected;
   bool threads_detected;
+  bool dynamic_memory_detected;
   virtual void register_languages();
 
   void get_command_line_options(optionst &options);
@@ -157,11 +159,11 @@ protected:
   void inline_main(goto_modelt &goto_model);
   void propagate_constants(goto_modelt &goto_model);
   void nondet_locals(goto_modelt &goto_model);
-  void unwind_goto_into_loop(goto_modelt &goto_model, unsigned k);
+  bool unwind_goto_into_loop(goto_modelt &goto_model, unsigned k);
   void replace_types_rec(const replace_symbolt &replace_const, exprt &expr);
   exprt evaluate_casts_in_constants(
     const exprt &expr,
-    const typet& parent_type,
+    const typet &parent_type,
     bool &valid);
   void remove_multiple_dereferences(goto_modelt &goto_model);
   void remove_multiple_dereferences(
@@ -174,6 +176,12 @@ protected:
   void add_assumptions_after_assertions(goto_modelt &goto_model);
   void filter_assertions(goto_modelt &goto_model);
   void split_loopheads(goto_modelt &goto_model);
+  void remove_loops_in_entry(goto_modelt &goto_model);
+  void create_dynamic_objects(goto_modelt &goto_model);
+  void add_dynamic_object_rec(exprt &expr, symbol_tablet &symbol_table);
+  void add_dynamic_object_symbols(
+    const ssa_heap_analysist &heap_analysis,
+    goto_modelt &goto_model);
 };
 
 #endif

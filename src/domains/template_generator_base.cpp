@@ -12,10 +12,14 @@ Author: Peter Schrammel
 #include <util/prefix.h>
 #include <util/mp_arith.h>
 
+#include <ssa/ssa_inliner.h>
+
 #include "template_generator_base.h"
 #include "equality_domain.h"
 #include "tpolyhedra_domain.h"
 #include "predabs_domain.h"
+#include "heap_domain.h"
+#include "heap_interval_domain.h"
 
 #ifdef DEBUG
 #include <iostream>
@@ -265,6 +269,38 @@ void template_generator_baset::filter_equality_domain()
 
 /*******************************************************************\
 
+Function: template_generator_baset::filter_heap_domain
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+void template_generator_baset::filter_heap_domain()
+{
+  domaint::var_specst new_var_specs(var_specs);
+  var_specs.clear();
+  for(auto &var : new_var_specs)
+  {
+    if(var.var.id()==ID_symbol && var.var.type().id()==ID_pointer)
+    {
+      if(is_pointed(var.var) &&
+         id2string(to_symbol_expr(var.var).get_identifier()).find(".")!=
+         std::string::npos)
+        continue;
+      // Filter out non-assigned OUT variables
+      if(var.kind!=domaint::OUT ||
+         ssa_inlinert::get_original_identifier(to_symbol_expr(var.var))!=
+         to_symbol_expr(var.var).get_identifier())
+        var_specs.push_back(var);
+    }
+  }
+}
+
+/*******************************************************************\
+
 Function: template_generator_baset::add_var
 
   Inputs:
@@ -289,8 +325,9 @@ void template_generator_baset::add_var(
     exprt post_var=post_renaming_map[var];
     exprt aux_var=aux_renaming_map[var];
     aux_expr=and_exprt(
-      implies_exprt(and_exprt(post_guard, not_exprt(init_guard)),
-                    equal_exprt(aux_var, post_var)),
+      implies_exprt(
+        and_exprt(post_guard, not_exprt(init_guard)),
+        equal_exprt(aux_var, post_var)),
       implies_exprt(init_guard, equal_exprt(aux_var, init_renaming_map[var])));
     post_guard=or_exprt(post_guard, init_guard);
   }
@@ -593,11 +630,14 @@ bool template_generator_baset::instantiate_custom_templates(
             if(contains_new_var)
               add_post_vars=true;
 
-            static_cast<tpolyhedra_domaint *>(domain_ptr)->add_template_row(
-              expr, pre_guard,
-              contains_new_var ? and_exprt(pre_guard, post_guard) : post_guard,
-              aux_expr,
-              contains_new_var ? domaint::OUT : domaint::LOOP);
+            static_cast<tpolyhedra_domaint *>(domain_ptr)
+              ->add_template_row(
+                expr,
+                pre_guard,
+                contains_new_var ?
+                  and_exprt(pre_guard, post_guard) : post_guard,
+                aux_expr,
+                contains_new_var ? domaint::OUT : domaint::LOOP);
           }
           // pred abs domain
           else if(predabs)
@@ -618,11 +658,14 @@ bool template_generator_baset::instantiate_custom_templates(
             if(contains_new_var)
               add_post_vars=true;
 
-            static_cast<predabs_domaint *>(domain_ptr)->add_template_row(
-              expr, pre_guard,
-              contains_new_var ? and_exprt(pre_guard, post_guard) : post_guard,
-              aux_expr,
-              contains_new_var ? domaint::OUT : domaint::LOOP);
+            static_cast<predabs_domaint *>(domain_ptr)
+              ->add_template_row(
+                expr,
+                pre_guard,
+                contains_new_var ?
+                  and_exprt(pre_guard, post_guard) : post_guard,
+                aux_expr,
+                contains_new_var ? domaint::OUT : domaint::LOOP);
           }
           else // neither pred abs, nor polyhedra
           {
@@ -666,7 +709,7 @@ Function: template_generator_baset::instantiate_standard_domains
 \*******************************************************************/
 
 void template_generator_baset::instantiate_standard_domains(
-  const local_SSAt &SSA)
+  const local_SSAt &SSA,bool recursive)
 {
   replace_mapt &renaming_map=
     std_invariants ? aux_renaming_map : post_renaming_map;
@@ -678,44 +721,93 @@ void template_generator_baset::instantiate_standard_domains(
     domain_ptr=
       new equality_domaint(domain_number, renaming_map, var_specs, SSA.ns);
   }
+  else if(options.get_bool_option("heap"))
+  {
+    filter_heap_domain();
+    domain_ptr=new heap_domaint(domain_number, renaming_map, var_specs, SSA.ns);
+  }
   else if(options.get_bool_option("intervals"))
   {
     domain_ptr=
       new tpolyhedra_domaint(domain_number, renaming_map, SSA.ns);
     filter_template_domain();
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_interval_template(
-      var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_interval_template(var_specs, SSA.ns,
+	    options.get_bool_option("context-sensitive") &&
+      recursive);
   }
   else if(options.get_bool_option("zones"))
   {
     domain_ptr=
       new tpolyhedra_domaint(domain_number, renaming_map, SSA.ns);
     filter_template_domain();
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_difference_template(
-      var_specs, SSA.ns);
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_interval_template(
-      var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_difference_template(var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_interval_template(var_specs, SSA.ns);
   }
   else if(options.get_bool_option("octagons"))
   {
     domain_ptr=
       new tpolyhedra_domaint(domain_number, renaming_map, SSA.ns);
     filter_template_domain();
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_sum_template(
-      var_specs, SSA.ns);
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_difference_template(
-      var_specs, SSA.ns);
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_interval_template(
-      var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_sum_template(var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_difference_template(var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_interval_template(var_specs, SSA.ns);
   }
   else if(options.get_bool_option("qzones"))
   {
     domain_ptr=
       new tpolyhedra_domaint(domain_number, renaming_map, SSA.ns);
     filter_template_domain();
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_difference_template(
-      var_specs, SSA.ns);
-    static_cast<tpolyhedra_domaint *>(domain_ptr)->add_quadratic_template(
-      var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_difference_template(var_specs, SSA.ns);
+    static_cast<tpolyhedra_domaint *>(domain_ptr)
+      ->add_quadratic_template(var_specs, SSA.ns);
+  }
+  else if(options.get_bool_option("heap-interval"))
+  {
+    filter_heap_interval_domain();
+    domain_ptr=
+      new heap_interval_domaint(domain_number, renaming_map, var_specs, SSA.ns);
+  }
+}
+
+void template_generator_baset::filter_heap_interval_domain()
+{
+  domaint::var_specst new_var_specs(var_specs);
+  var_specs.clear();
+  for(domaint::var_specst::const_iterator v=new_var_specs.begin();
+      v!=new_var_specs.end(); v++)
+  {
+    const domaint::vart &s=v->var;
+
+    if(s.id()==ID_symbol && is_pointed(s) &&
+       id2string(to_symbol_expr(s).get_identifier()).find(".")!=
+       std::string::npos)
+      continue;
+
+    if(s.type().id()==ID_unsignedbv ||
+       s.type().id()==ID_signedbv ||
+       s.type().id()==ID_floatbv)
+    {
+      var_specs.push_back(*v);
+      continue;
+    }
+
+    if(s.id()==ID_symbol && s.type().id()==ID_pointer)
+    {
+      // Filter out non-assigned OUT variables
+      if(v->kind!=domaint::OUT ||
+         ssa_inlinert::get_original_identifier(to_symbol_expr(s))!=
+         to_symbol_expr(s).get_identifier())
+      {
+        var_specs.push_back(*v);
+        continue;
+      }
+    }
   }
 }
