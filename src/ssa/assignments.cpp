@@ -7,9 +7,11 @@ Author: Daniel Kroening, kroening@kroening.com
 \*******************************************************************/
 
 #include <util/byte_operators.h>
+#include <util/find_symbols.h>
 
 #include "assignments.h"
 #include "ssa_dereference.h"
+#include "local_ssa.h"
 
 /*******************************************************************\
 
@@ -38,6 +40,14 @@ void assignmentst::build_assignment_map(
       const code_assignt &code_assign=to_code_assign(it->code);
       exprt lhs_deref=dereference(code_assign.lhs(), ssa_value_ai[it], "", ns);
       assign(lhs_deref, it, ns);
+      exprt lhs_symbolic_deref=symbolic_dereference(code_assign.lhs(), ns);
+      assign(lhs_symbolic_deref, it, ns);
+
+      assign_symbolic_rhs(code_assign.rhs(), it, ns);
+    }
+    else if(it->is_assert())
+    {
+      assign_symbolic_rhs(it->guard, it, ns);
     }
     else if(it->is_decl())
     {
@@ -49,19 +59,61 @@ void assignmentst::build_assignment_map(
       const code_function_callt &code_function_call=
         to_code_function_call(it->code);
 
-      // functions may alter state almost arbitrarily:
-      // * any global-scoped variables
-      // * any dirty locals
+      // Get information from ssa_heap_analysis
+      auto n_it=it;
+      ++n_it;
+      const irep_idt fname=to_symbol_expr(
+        code_function_call.function()).get_identifier();
+      std::list<symbol_exprt> new_objects;
+      std::set<exprt> modified_objects;
+
+      if(ssa_heap_analysis.has_location(n_it))
+      {
+        new_objects=ssa_heap_analysis[n_it].new_caller_objects(fname, it);
+        modified_objects=ssa_heap_analysis[n_it].modified_objects(fname);
+      }
+
+      // Assign new objects
+      for(auto &o : new_objects)
+      {
+        assign(o, it, ns);
+      }
 
       for(objectst::const_iterator
-          o_it=ssa_objects.dirty_locals.begin();
-          o_it!=ssa_objects.dirty_locals.end(); o_it++)
-        assign(*o_it, it, ns);
-
-      for(objectst::const_iterator
-          o_it=ssa_objects.globals.begin();
+            o_it=ssa_objects.globals.begin();
           o_it!=ssa_objects.globals.end(); o_it++)
-        assign(*o_it, it, ns);
+      {
+        if(id2string(o_it->get_identifier())==id2string(fname)+"#return_value")
+          assign(*o_it, it, ns);
+      }
+
+      // Assign all modified objects
+      for(const exprt &modified : modified_objects)
+      {
+        const exprt arg=
+          ssa_heap_analysis[n_it].function_map.at(fname).
+            corresponding_expr(modified, code_function_call.arguments(), 0);
+
+        if(arg!=modified)
+        {
+          const exprt arg_deref=dereference(arg, ssa_value_ai[it], "", ns);
+          assign(arg_deref, it, ns);
+
+          std::set<symbol_exprt> symbols;
+          find_symbols(arg_deref, symbols);
+          for(const symbol_exprt &symbol : symbols)
+          {
+            if(symbol.type()==arg_deref.type())
+            {
+              auto &aliases=ssa_value_ai[n_it](symbol, ns).value_set;
+              for(auto &alias : aliases)
+              {
+                assign(alias.get_expr(), it, ns);
+              }
+            }
+          }
+        }
+      }
 
       // the call might come with an assignment
       if(code_function_call.lhs().is_not_nil())
@@ -121,7 +173,8 @@ void assignmentst::assign(
     // object?
     ssa_objectt ssa_object(lhs, ns);
 
-    if(ssa_object)
+    if(ssa_object &&
+       !ssa_object.is_unknown_obj())  // unknown objects are just placeholders
     {
       assign(ssa_object, loc, ns);
     }
@@ -180,6 +233,38 @@ void assignmentst::assign(
   const namespacet &)
 {
   assignment_map[loc].insert(lhs);
+}
+
+/*******************************************************************\
+
+Function: assignmentst::build_assertion
+
+  Inputs:
+
+ Outputs:
+
+ Purpose: Adds to assignments dereferences from assertion
+
+\*******************************************************************/
+
+void assignmentst::assign_symbolic_rhs(
+  const exprt &expr,
+  const locationt &loc,
+  const namespacet &ns)
+{
+  exprt rhs_symbolic_deref=symbolic_dereference(expr, ns);
+  ssa_objectt rhs_object(rhs_symbolic_deref, ns);
+
+  if(has_symbolic_deref(rhs_symbolic_deref) && rhs_object)
+  {
+    rhs_symbolic_deref.set("#is_rhs_assign", true);
+    assign(rhs_symbolic_deref, loc, ns);
+  }
+  else if(has_symbolic_deref(rhs_symbolic_deref))
+  {
+    forall_operands(it, expr)
+      assign_symbolic_rhs(*it, loc, ns);
+  }
 }
 
 /*******************************************************************\

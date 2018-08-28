@@ -51,10 +51,12 @@ Author: Daniel Kroening, Peter Schrammel
 #include "summary_checker_ai.h"
 #include "summary_checker_bmc.h"
 #include "summary_checker_kind.h"
+#include "summary_checker_nonterm.h"
+#include "summary_checker_rect.h"
 #include "show.h"
 #include "horn_encoding.h"
 
-#define UNWIND_GOTO_INTO_LOOP 1
+#define UNWIND_GOTO_INTO_LOOP 0
 #define REMOVE_MULTIPLE_DEREFERENCES 1
 #define IGNORE_RECURSION 1
 #define IGNORE_THREADS 1
@@ -74,11 +76,12 @@ Function: twols_parse_optionst::twols_parse_optionst
 \*******************************************************************/
 
 twols_parse_optionst::twols_parse_optionst(int argc, const char **argv):
-parse_options_baset(TWOLS_OPTIONS, argc, argv),
-language_uit(cmdline, ui_message_handler),
+  parse_options_baset(TWOLS_OPTIONS, argc, argv),
+  language_uit(cmdline, ui_message_handler),
   ui_message_handler(cmdline, "2LS " TWOLS_VERSION),
   recursion_detected(false),
-  threads_detected(false)
+  threads_detected(false),
+  dynamic_memory_detected(false)
 {
 }
 
@@ -181,6 +184,11 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   else
     options.set_option("std-invariants", false);
 
+  if(cmdline.isset("no-propagation"))
+    options.set_option("constant-propagation", false);
+  else
+    options.set_option("constant-propagation", true);
+
   // magic error label
   if(cmdline.isset("error-label"))
     options.set_option("error-label", cmdline.get_value("error-label"));
@@ -191,6 +199,14 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   {
     options.set_option("equalities", true);
     options.set_option("std-invariants", true);
+  }
+  else if(cmdline.isset("heap"))
+  {
+    options.set_option("heap", true);
+  }
+  else if(cmdline.isset("heap-interval"))
+  {
+    options.set_option("heap-interval", true);
   }
   else
   {
@@ -263,7 +279,17 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
     options.set_option("k-induction", true);
     options.set_option("inline", true);
     if(!cmdline.isset("unwind"))
-      options.set_option("unwind", UINT_MAX);
+      options.set_option("unwind", std::numeric_limits<unsigned>::max());
+  }
+
+  // compute singleton recurrence set - simple nontermination
+  if(cmdline.isset("nontermination"))
+  {
+    options.set_option("nontermination", true);
+    options.set_option("all-properties", true);
+    options.set_option("inline", true);
+    if(!cmdline.isset("unwind"))
+      options.set_option("unwind", std::numeric_limits<unsigned>::max());
   }
 
   // do incremental bmc
@@ -273,8 +299,16 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
     options.set_option("inline", true);
     options.set_option("havoc", true);
     if(!cmdline.isset("unwind"))
-      options.set_option("unwind", UINT_MAX);
+      options.set_option("unwind", std::numeric_limits<unsigned>::max());
   }
+
+  //............................................
+  // handle recursive functions
+  if(cmdline.isset("has-recursion"))
+  {
+    options.set_option("has-recursion", true);
+  }
+  //.............................................
 
   // check for spuriousness of assertion failures
   if(cmdline.isset("no-spurious-check"))
@@ -300,6 +334,7 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
     options.set_option("competition-mode", true);
     options.set_option("all-properties", false);
     options.set_option("inline", true);
+    options.set_option("give-up-invariants", "2");
   }
 
   // instrumentation / output
@@ -321,8 +356,8 @@ void twols_parse_optionst::get_command_line_options(optionst &options)
   }
 #endif
 
-  if(cmdline.isset("show-trace"))
-    options.set_option("show-trace", true);
+  if(cmdline.isset("trace"))
+    options.set_option("trace", true);
   if(cmdline.isset("graphml-witness"))
     options.set_option("graphml-witness", cmdline.get_value("graphml-witness"));
   if(cmdline.isset("json-cex"))
@@ -371,6 +406,16 @@ int twols_parse_optionst::doit()
   if(get_goto_program(options, goto_model))
     return 6;
 
+  const namespacet ns(goto_model.symbol_table);
+  ssa_heap_analysist heap_analysis(ns);
+  if((options.get_bool_option("heap") ||
+      options.get_bool_option("heap-interval")) &&
+     !options.get_bool_option("inline"))
+  {
+    heap_analysis(goto_model.goto_functions);
+    add_dynamic_object_symbols(heap_analysis, goto_model);
+  }
+
   if(cmdline.isset("show-stats"))
   {
     show_stats(goto_model, std::cout);
@@ -383,7 +428,13 @@ int twols_parse_optionst::doit()
   {
     bool simplify=!cmdline.isset("no-simplify");
     irep_idt function=cmdline.get_value("function");
-    show_ssa(goto_model, function, simplify, std::cout, ui_message_handler);
+    show_ssa(
+      goto_model,
+      heap_analysis,
+      function,
+      simplify,
+      std::cout,
+      ui_message_handler);
     return 7;
   }
 
@@ -420,10 +471,24 @@ int twols_parse_optionst::doit()
     options.set_option("show-invariants", true);
   }
 
-#if IGNORE_RECURSION
-  if(recursion_detected)
+  if(cmdline.isset("nontermination"))
   {
-    status() << "Recursion not supported" << eom;
+    // turn assertions (from generic checks) into assumptions
+    Forall_goto_functions(f_it, goto_model.goto_functions)
+    {
+      goto_programt &body=f_it->second.body;
+      Forall_goto_program_instructions(i_it, body)
+      {
+        if(i_it->is_assert())
+          i_it->type=goto_program_instruction_typet::ASSUME;
+      }
+    }
+  }
+
+#if IGNORE_RECURSION
+  if(recursion_detected && !cmdline.isset("has-recursion"))
+  {
+    status() << "Recursion not supported without --has-recursion option" << eom;
     report_unknown();
     return 5;
   }
@@ -456,6 +521,10 @@ int twols_parse_optionst::doit()
     status() << "Havocking loops and function calls" << eom;
   else if(options.get_bool_option("equalities"))
     status() << "Using (dis)equalities domain" << eom;
+  else if(options.get_bool_option("heap"))
+    status() << "Using heap domain" << eom;
+  else if(options.get_bool_option("heap-interval"))
+    status() << "Using heap domain with interval domain for values" << eom;
   else
   {
     if(options.get_bool_option("intervals"))
@@ -477,21 +546,52 @@ int twols_parse_optionst::doit()
     status() << eom;
   }
 
+  // don't use k-induction with dynamic memory
+  if(options.get_bool_option("competition-mode") &&
+     options.get_bool_option("k-induction") &&
+     dynamic_memory_detected)
+  {
+    options.set_option("k-induction", false);
+    options.set_option("std-invariants", false);
+    options.set_option("incremental-bmc", false);
+    options.set_option("unwind", 0);
+  }
+  // don't do nontermination with dynamic memory
+  if(options.get_bool_option("competition-mode") &&
+     (options.get_bool_option("termination") ||
+      options.get_bool_option("nontermination")) &&
+     dynamic_memory_detected)
+  {
+    error() << "Termination analysis does not support "
+            << "dynamic memory allocation" << eom;
+    report_unknown();
+    return 5;
+  }
+
   try
   {
     std::unique_ptr<summary_checker_baset> checker;
     if(!options.get_bool_option("k-induction") &&
        !options.get_bool_option("incremental-bmc"))
-      checker=std::unique_ptr<summary_checker_baset>(
-        new summary_checker_ait(options));
+    {
+      if(!options.get_bool_option("has-recursion"))
+        checker=std::unique_ptr<summary_checker_baset>(
+          new summary_checker_ait(options, heap_analysis));
+      else
+        checker=std::unique_ptr<summary_checker_baset>(
+          new summary_checker_rect(options, heap_analysis));
+    }
     if(options.get_bool_option("k-induction") &&
        !options.get_bool_option("incremental-bmc"))
       checker=std::unique_ptr<summary_checker_baset>(
-        new summary_checker_kindt(options));
+        new summary_checker_kindt(options, heap_analysis));
     if(!options.get_bool_option("k-induction") &&
        options.get_bool_option("incremental-bmc"))
       checker=std::unique_ptr<summary_checker_baset>(
-        new summary_checker_bmct(options));
+        new summary_checker_bmct(options, heap_analysis));
+    if(options.get_bool_option("nontermination"))
+     checker=std::unique_ptr<summary_checker_baset>(
+       new summary_checker_nontermt(options, heap_analysis));
 
     checker->set_message_handler(get_message_handler());
     checker->simplify=!cmdline.isset("no-simplify");
@@ -540,7 +640,8 @@ int twols_parse_optionst::doit()
 
     bool report_assertions=
       !options.get_bool_option("preconditions") &&
-      !options.get_bool_option("termination");
+      !options.get_bool_option("termination") &&
+      !options.get_bool_option("nontermination");
     // do actual analysis
     switch((*checker)(goto_model))
     {
@@ -548,23 +649,50 @@ int twols_parse_optionst::doit()
       if(report_assertions)
         report_properties(options, goto_model, checker->property_map);
       report_success();
-      if(cmdline.isset("graphml-witness") &&
-         !options.get_bool_option("termination"))
+      if(cmdline.isset("graphml-witness"))
         output_graphml_proof(options, goto_model, *checker);
       retval=0;
       break;
 
     case property_checkert::FAIL:
+    {
       if(report_assertions)
         report_properties(options, goto_model, checker->property_map);
-      report_failure();
+
+      // validate trace
+      bool trace_valid=false;
+      for(const auto &p : checker->property_map)
+      {
+        if(p.second.result!=property_checkert::FAIL)
+          continue;
+
+        if(options.get_bool_option("trace"))
+          show_counterexample(goto_model, p.second.error_trace);
+
+        trace_valid=
+          !p.second.error_trace.steps.empty() &&
+          (options.get_bool_option("nontermination") ||
+           p.second.error_trace.steps.back().is_assert());
+        break;
+      }
+
       if(cmdline.isset("graphml-witness"))
       {
+#if 1
+        if(!trace_valid)
+        {
+          retval=5;
+          error() << "Internal witness validation failed" << eom;
+          report_unknown();
+          break;
+        }
+#endif
         output_graphml_cex(options, goto_model, *checker);
       }
+      report_failure();
       retval=10;
       break;
-
+    }
     case property_checkert::UNKNOWN:
       if(report_assertions)
         report_properties(options, goto_model, checker->property_map);
@@ -745,8 +873,8 @@ void twols_parse_optionst::show_stats(
         const code_assignt &assign=to_code_assign(instruction.code);
         expr_stats_rec(assign.lhs(), stats);
         expr_stats_rec(assign.rhs(), stats);
+        break;
       }
-      break;
       case ASSUME:
         expr_stats_rec(instruction.guard, stats);
         break;
@@ -840,7 +968,7 @@ void twols_parse_optionst::require_entry(
 
   if(goto_model.symbol_table.symbols.find(entry_point)==
      symbol_table.symbols.end())
-    throw "The program has no entry point; please complete linking";
+    throw "the program has no entry point; please complete linking";
 }
 
 /*******************************************************************\
@@ -1015,7 +1143,8 @@ bool twols_parse_optionst::process_goto_program(
   {
     status() << "Function Pointer Removal" << eom;
     remove_function_pointers(
-      goto_model, cmdline.isset("pointer-check"));
+      goto_model,
+      cmdline.isset("pointer-check"));
 
     // do partial inlining
     if(options.get_bool_option("inline-partial"))
@@ -1047,7 +1176,9 @@ bool twols_parse_optionst::process_goto_program(
       status() << "Performing full inlining" << eom;
       const namespacet ns(goto_model.symbol_table);
       goto_inlinet goto_inline(
-        goto_model.goto_functions, ns, ui_message_handler);
+        goto_model.goto_functions,
+        ns,
+        ui_message_handler);
       goto_inline();
 #if IGNORE_RECURSION
       recursion_detected=goto_inline.recursion_detected();
@@ -1064,6 +1195,13 @@ bool twols_parse_optionst::process_goto_program(
 
 #if UNWIND_GOTO_INTO_LOOP
     unwind_goto_into_loop(goto_model, 2);
+#else
+    if(unwind_goto_into_loop(goto_model, 2))
+    {
+      status() << "Irreducible control flow not supported" << eom;
+      report_unknown();
+      return 5;
+    }
 #endif
 
     remove_skip(goto_model.goto_functions);
@@ -1078,8 +1216,26 @@ bool twols_parse_optionst::process_goto_program(
 #endif
 
 #if 1
+    // Find, inline and remove malloc function
     // TODO: find a better place for that
-    replace_malloc(goto_model, "");
+    Forall_goto_functions(it, goto_model.goto_functions)
+    {
+      if(it->first=="malloc" || it->first=="free")
+        it->second.type.set(ID_C_inlined, true);
+    }
+    goto_partial_inline(goto_model, ui_message_handler, 0);
+    Forall_goto_functions(it, goto_model.goto_functions)
+    {
+      if(it->first=="malloc" || it->first=="free")
+        it->second.body.clear();
+    }
+#endif
+
+    // create symbols for objects pointed by parameters
+    create_dynamic_objects(goto_model);
+
+#if REMOVE_MULTIPLE_DEREFERENCES
+    remove_multiple_dereferences(goto_model);
 #endif
 
     // recalculate numbers, etc.
@@ -1087,6 +1243,12 @@ bool twols_parse_optionst::process_goto_program(
 
     // add loop ids
     goto_model.goto_functions.compute_loop_numbers();
+
+    // Replace malloc
+    dynamic_memory_detected=replace_malloc(goto_model, "");
+
+    // remove loop heads from function entries
+    remove_loops_in_entry(goto_model);
 
     // inline __CPROVER_initialize and main
     if(cmdline.isset("inline-main"))
@@ -1103,7 +1265,9 @@ bool twols_parse_optionst::process_goto_program(
     filter_assertions(goto_model);
 #endif
 
-    if(!cmdline.isset("no-propagation"))
+    if(options.get_bool_option("constant-propagation") &&
+       !(options.get_bool_option("competition-mode") &&
+         dynamic_memory_detected))
     {
       status() << "Constant Propagation" << eom;
       propagate_constants(goto_model);
@@ -1204,7 +1368,8 @@ void twols_parse_optionst::report_properties(
       xmlt xml_result("result");
       xml_result.set_attribute("property", id2string(it->first));
       xml_result.set_attribute(
-        "status", property_checkert::as_string(it->second.result));
+        "status",
+        property_checkert::as_string(it->second.result));
       std::cout << xml_result << "\n";
     }
     else
@@ -1216,7 +1381,7 @@ void twols_parse_optionst::report_properties(
                << eom;
     }
 
-    if(cmdline.isset("show-trace") &&
+    if(options.get_bool_option("trace") &&
        it->second.result==property_checkert::FAIL)
       show_counterexample(goto_model, it->second.error_trace);
     if(cmdline.isset("json-cex") &&
@@ -1282,8 +1447,8 @@ void twols_parse_optionst::report_success()
     xml.data="SUCCESS";
     std::cout << xml;
     std::cout << std::endl;
+    break;
   }
-  break;
 
   default:
     assert(false);
@@ -1579,6 +1744,7 @@ void twols_parse_optionst::help()
     "Backend options:\n"
     " --all-functions              check each function as entry point\n"
     " --stop-on-fail               stop on first failing assertion\n"
+    " --trace                      give a counterexample trace for failed properties\n" //NOLINT(*)
     " --context-sensitive          context-sensitive analysis from entry point\n" // NOLINT(*)
     " --termination                compute ranking functions to prove termination\n" // NOLINT(*)
     " --k-induction                use k-induction\n"
@@ -1588,8 +1754,10 @@ void twols_parse_optionst::help()
     " --havoc                      havoc loops and function calls\n"
     " --intervals                  use interval domain\n"
     " --equalities                 use equalities and disequalities domain\n"
+    " --heap                       use heap domain\n"
     " --zones                      use zone domain\n"
     " --octagons                   use octagon domain\n"
+    " --heap-interval              use heap domain with interval domain for values\n" // NOLINT(*)
     " --enum-solver                use solver based on model enumeration\n"
     " --binsearch-solver           use solver based on binary search\n"
     " --arrays                     do not ignore array contents\n"

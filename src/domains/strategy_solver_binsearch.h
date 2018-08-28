@@ -25,9 +25,25 @@ public:
   }
 
   virtual bool iterate(invariantt &inv);
+  virtual bool iterate_for_recursive(
+  invariantt &inv, tmpl_rename_mapt templ_maps,bool cntxt_sensitive);
 
 protected:
   tpolyhedra_domaint &tpolyhedra_domain;
+  exprt get_rec_call_pre_constraints(
+   const tpolyhedra_domaint::templ_valuet &val,
+   tmpl_rename_mapt templ_maps,
+   const std::set<tpolyhedra_domaint::rowt> &symb_rows=
+   std::set<tpolyhedra_domaint::rowt>());
+  
+  std::vector<std::vector<exprt>> get_rec_call_post_constraints(
+   const tpolyhedra_domaint::templ_valuet &val,
+   tmpl_rename_mapt templ_maps);
+  exprt get_rec_call_symb_post_constraints(
+   const tpolyhedra_domaint::templ_valuet &val,
+   tmpl_rename_mapt templ_maps,
+   std::size_t row);
+  void get_max_lower(tmpl_rename_mapt templ_maps,std::size_t row);
 };
 
 #endif

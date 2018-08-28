@@ -282,7 +282,7 @@ void unwindable_local_SSAt::rename(exprt &expr, locationt current_loc)
   if(expr.id()==ID_symbol)
   {
     symbol_exprt &s=to_symbol_expr(expr);
-    locationt def_loc;
+    locationt def_loc=goto_function.body.instructions.end();
     // we could reuse name(),
     // but then we would have to search in the ssa_objects
     // ENHANCEMENT: maybe better to attach base name, ssa name,
@@ -294,13 +294,15 @@ void unwindable_local_SSAt::rename(exprt &expr, locationt current_loc)
     s.set_identifier(id2string(id)+unwind_suffix);
 
 #if 0
-    std::cout << "DEF_LOC: " << def_loc->location_number << std::endl;
-    std::cout << "DEF_LEVEL: " << def_level << std::endl;
-    std::cout << "O.size: " << current_unwindings.size() << std::endl;
-    std::cout << "current: " << current_unwinding << std::endl;
     std::cout << "RENAME_SYMBOL: "
               << id << " --> "
               << s.get_identifier() << std::endl;
+    std::cout << "DEF_LOC: "
+              << (def_loc!=goto_function.body.instructions.end()
+                  ? def_loc->location_number : -1) << std::endl;
+    std::cout << "DEF_LEVEL: " << def_level << std::endl;
+    std::cout << "O.size: " << current_unwindings.size() << std::endl;
+    std::cout << "current: " << current_unwinding << std::endl << std::endl;
 #endif
   }
   if(expr.id()==ID_nondet_symbol)
@@ -458,4 +460,46 @@ void unwindable_local_SSAt::compute_loop_hierarchy()
     }
   }
   while(i_it!=goto_function.body.instructions.begin());
+}
+
+/*******************************************************************\
+
+Function: unwindable_local_SSAt::output_verbose
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void unwindable_local_SSAt::output_verbose(std::ostream &out) const
+{
+  for(const auto &node : nodes)
+  {
+    if(node.empty())
+      continue;
+    out << "*** " << node.location->location_number
+        << " " << node.location->source_location << "\n";
+    node.output(out, ns);
+    for(const auto &e : node.equalities)
+    {
+      std::set<symbol_exprt> symbols;
+      find_symbols(e, symbols);
+      for(const auto &s : symbols)
+      {
+        if(s.type().get_bool("#dynamic"))
+          out << s.get_identifier() << "\n";
+      }
+    }
+    if(node.loophead!=nodes.end())
+      out << "loop back to location "
+          << node.loophead->location->location_number << "\n";
+    if(!node.enabling_expr.is_true())
+      out << "enabled if "
+          << from_expr(ns, "", node.enabling_expr) << "\n";
+    out << "\n";
+  }
+  out << "(enable) " << from_expr(ns, "", get_enabling_exprs()) << "\n\n";
 }

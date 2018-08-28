@@ -1,7 +1,7 @@
 SRC = summarizer_base.cpp  summarizer_bw.cpp	\
       summarizer_bw_term.cpp	summarizer_fw_contexts.cpp \
       summarizer_fw.cpp  summarizer_fw_term.cpp  \
-      summary.cpp  summary_db.cpp
+      summary.cpp  summary_db.cpp summarizer_rec_fw.cpp
 
 include ../config.inc
 include $(CBMC)/src/config.inc

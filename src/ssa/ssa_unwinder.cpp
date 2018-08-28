@@ -7,6 +7,7 @@ Author: Peter Schrammel, Saurabh Joshi
 \*******************************************************************/
 
 // #define DEBUG
+#define COMPETITION
 
 #include <util/prefix.h>
 
@@ -280,8 +281,9 @@ void ssa_local_unwindert::unwind(unsigned k)
     return;
 
   current_enabling_expr=
-    symbol_exprt("unwind::"+id2string(fname)+"::enable"+i2string(k),
-                 bool_typet());
+    symbol_exprt(
+      "unwind::"+id2string(fname)+"::enable"+i2string(k),
+      bool_typet());
   SSA.enabling_exprs.push_back(current_enabling_expr);
 
   // TODO: just for exploratory integration, must go away
@@ -471,7 +473,9 @@ void ssa_local_unwindert::add_assertions(loopt &loop, bool is_last)
       if(!is_last) // only add assumptions if we are not in %0 iteration
       {
         if(is_kinduction)
+        {
           node.constraints.push_back(*a_it);
+        }
         else if(is_bmc)
         {
           // only add in base case
@@ -559,8 +563,9 @@ void ssa_local_unwindert::add_loop_connector(loopt &loop)
       SSA.increment_unwindings(0);
     }
     else if(e_it->lhs().id()==ID_symbol &&
-            !has_prefix(id2string(to_symbol_expr(e_it->lhs()).get_identifier()),
-                        "ssa::$guard"))
+            !has_prefix(
+              id2string(to_symbol_expr(e_it->lhs()).get_identifier()),
+              "ssa::$guard"))
     { // this is needed for while loops
       node.equalities.push_back(*e_it);
       SSA.decrement_unwindings(0);
@@ -569,8 +574,9 @@ void ssa_local_unwindert::add_loop_connector(loopt &loop)
     }
   }
   // continuation guard and condition
-  exprt g_rhs=and_exprt(SSA.guard_symbol(loop.body_nodes.back().location),
-                        SSA.cond_symbol(loop.body_nodes.back().location));
+  exprt g_rhs=and_exprt(
+    SSA.guard_symbol(loop.body_nodes.back().location),
+    SSA.cond_symbol(loop.body_nodes.back().location));
   SSA.decrement_unwindings(0);
   exprt g_lhs=SSA.guard_symbol(loop.body_nodes.begin()->location);
   SSA.increment_unwindings(0);
@@ -591,8 +597,10 @@ Function: ssa_local_unwindert::add_exit_merges
 
 void ssa_local_unwindert::add_exit_merges(loopt &loop, unsigned k)
 {
-  SSA.nodes.push_back(local_SSAt::nodet(loop.body_nodes.begin()->location,
-                                        SSA.nodes.end())); // add new node
+  SSA.nodes.push_back(
+    local_SSAt::nodet(
+      loop.body_nodes.begin()->location,
+      SSA.nodes.end())); // add new node
   local_SSAt::nodet &node=SSA.nodes.back();
   node.enabling_expr=current_enabling_expr;
 
@@ -658,7 +666,11 @@ void ssa_local_unwindert::add_hoisted_assertions(loopt &loop, bool is_last)
       it!=loop.assertion_hoisting_map.end(); ++it)
   {
     if(!is_last // only add assumptions if we are not in %0 iteration
-       && is_kinduction && !it->second.assertions.empty())
+       && is_kinduction && !it->second.assertions.empty()
+#ifdef COMPETITION
+       && !(it->first->guard.id()==ID_not &&
+            it->first->guard.op0().id()==ID_overflow_shl))
+#endif
     {
       exprt e=disjunction(it->second.exit_conditions);
       SSA.rename(e, loop.body_nodes.begin()->location);
@@ -716,8 +728,9 @@ Function: ssa_local_unwindert::get_continuation_condition
 exprt ssa_local_unwindert::get_continuation_condition(const loopt& loop) const
 {
   SSA.current_location=loop.body_nodes.back().location; // TODO: must go away
-  return and_exprt(SSA.guard_symbol(loop.body_nodes.back().location),
-                   SSA.cond_symbol(loop.body_nodes.back().location));
+  return and_exprt(
+    SSA.guard_symbol(loop.body_nodes.back().location),
+    SSA.cond_symbol(loop.body_nodes.back().location));
 }
 
 /*******************************************************************\
@@ -895,9 +908,10 @@ void ssa_unwindert::init(bool is_kinduction, bool is_bmc)
   ssa_dbt::functionst& funcs=ssa_db.functions();
   for(auto &f : funcs)
   {
-    unwinder_map.insert(unwinder_pairt(
-      f.first,
-      ssa_local_unwindert(f.first, (*(f.second)), is_kinduction, is_bmc)));
+    unwinder_map.insert(
+      unwinder_pairt(
+        f.first,
+        ssa_local_unwindert(f.first, (*(f.second)), is_kinduction, is_bmc)));
   }
 }
 

@@ -23,14 +23,13 @@ Author: Peter Schrammel
 class summarizer_fwt:public summarizer_baset
 {
 public:
-  explicit summarizer_fwt(
-    optionst &_options,
-    summary_dbt &_summary_db,
-    ssa_dbt &_ssa_db,
-    ssa_unwindert &_ssa_unwinder,
-    ssa_inlinert &_ssa_inliner):
-    summarizer_baset(
-      _options, _summary_db, _ssa_db, _ssa_unwinder, _ssa_inliner)
+  summarizer_fwt(
+    optionst &options,
+    summary_dbt &summary_db,
+    ssa_dbt &ssa_db,
+    ssa_unwindert &ssa_unwinder,
+    ssa_inlinert &ssa_inliner):
+    summarizer_baset(options, summary_db, ssa_db, ssa_unwinder, ssa_inliner)
   {
   }
 
@@ -40,7 +39,7 @@ protected:
     const exprt &precondition,
     bool context_sensitive);
 
-  void inline_summaries(
+  virtual void inline_summaries(
     const function_namet &function_name,
     local_SSAt &SSA,
     const exprt &precondition,

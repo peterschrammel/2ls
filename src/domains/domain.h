@@ -39,7 +39,7 @@ public:
   typedef std::vector<vart> var_listt;
   typedef std::set<vart> var_sett;
 
-  typedef enum {LOOP, IN, OUT, OUTL} kindt;
+  typedef enum {LOOP, IN, OUT, OUTL, OUTHEAP} kindt;
 
   typedef exprt guardt;
 
@@ -65,6 +65,9 @@ public:
   };
 
   virtual void initialize(valuet &value) { value.basic_value=valuet::BOTTOM; }
+  virtual void initialize_in_templates(valuet &value,
+    std::map<exprt,constant_exprt> context_bounds=
+    std::map<exprt,constant_exprt>()) {assert(false);}
 
   // returns true as long as further refinements are possible
   virtual void reset_refinements() { }
